@@ -147,6 +147,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
           if (classesAssigned >= maxNeeded) break;
           if (!teacherSlots.includes(slot.id)) continue;
           if (!isSlotFree(teacher.id, teacherSchedule, day, slot.id)) continue;
+          if (!isPairedTeacherFree(teacher.id, day, slot.id)) continue;
           if (!isSlotFree(roomId, roomSchedule, day, slot.id)) continue;
 
           // Check all merged batches are free in this slot
