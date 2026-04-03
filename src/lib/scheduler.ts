@@ -268,6 +268,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
               const teacherSlots = getTeacherSlots(teacher.id, day);
               if (!teacherSlots.includes(slot.id)) continue;
               if (!isSlotFree(teacher.id, teacherSchedule, day, slot.id)) continue;
+              if (!isPairedTeacherFree(teacher.id, day, slot.id)) continue;
 
               // Check teacher max 6 hours per day
               if (!teacherDayHours.has(teacher.id)) teacherDayHours.set(teacher.id, new Map());
