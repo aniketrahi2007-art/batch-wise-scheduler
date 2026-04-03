@@ -45,11 +45,13 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
   const classesNeeded: Map<string, Map<Subject, number>> = new Map();
 
   for (const batch of activeBatches) {
-    const batchDists = distributions.filter(d => d.batchId === batch.id);
+    const batchDists = distributions.filter(d => d.batchId === batch.id && d.percentage > 0);
     const batchClasses = new Map<Subject, number>();
+    // Each batch has 3 slots per day (morning or evening)
+    const totalBatchSlots = activeDays.length * 3;
     for (const dist of batchDists) {
-      const classes = Math.round((dist.percentage / 100) * (activeDays.length * 3)); // ~3 slots per day per batch
-      batchClasses.set(dist.subject, Math.max(1, classes));
+      const classes = Math.round((dist.percentage / 100) * totalBatchSlots);
+      if (classes > 0) batchClasses.set(dist.subject, classes);
     }
     classesNeeded.set(batch.id, batchClasses);
   }
