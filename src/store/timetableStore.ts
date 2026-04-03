@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Teacher, Batch, Room, TeacherAvailability, TeacherBatchMapping,
-  SubjectDistribution, WeekConfig, GeneratedTimetable, MergeRule,
+  SubjectDistribution, WeekConfig, GeneratedTimetable, MergeRule, TeacherPair,
   DAYS, SLOTS, DayOfWeek, SlotId, Subject
 } from '@/types/timetable';
 import { defaultTeachers, defaultBatches, defaultRooms, categoryDistributions } from '@/data/defaults';
