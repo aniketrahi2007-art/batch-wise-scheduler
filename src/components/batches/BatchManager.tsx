@@ -61,7 +61,7 @@ export function BatchManager() {
       active: true,
       locked: false,
     });
-    setForm({ displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1', slotSession: 'Evening' });
+    resetForm();
     setAdding(false);
   };
 
