@@ -1,25 +1,30 @@
 import { useTimetableStore } from '@/store/timetableStore';
-import { DAYS, SLOTS, DayOfWeek, SlotId } from '@/types/timetable';
+import { DAYS, SLOTS, DayOfWeek, SlotId, SlotTime } from '@/types/timetable';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { useMemo } from 'react';
 
-const SUBJECT_COLORS: Record<string, string> = {
-  Physics: 'bg-blue-100 text-blue-800 border-blue-200',
-  Chemistry: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  Maths: 'bg-amber-100 text-amber-800 border-amber-200',
-  Biology: 'bg-green-100 text-green-800 border-green-200',
-  English: 'bg-purple-100 text-purple-800 border-purple-200',
-  Hindi: 'bg-rose-100 text-rose-800 border-rose-200',
-  Sanskrit: 'bg-orange-100 text-orange-800 border-orange-200',
+// Color coding for batch headers (matching reference)
+const BATCH_HEADER_COLORS: Record<string, string> = {
+  JEE: 'bg-blue-500 text-primary-foreground',
+  NEET: 'bg-emerald-600 text-primary-foreground',
+  Junior: 'bg-gray-400 text-primary-foreground',
+  Droppers: 'bg-orange-500 text-primary-foreground',
+};
+
+// Alternating pastel row per day
+const DAY_ROW_COLORS: Record<string, string> = {
+  Mon: 'bg-blue-50',
+  Tue: 'bg-blue-50',
+  Wed: 'bg-blue-50',
+  Thu: 'bg-blue-50',
+  Fri: 'bg-orange-50',
+  Sat: 'bg-orange-50',
 };
 
 export function TimetableView() {
   const { generatedTimetable, batches, teachers } = useTimetableStore();
-  const [viewMode, setViewMode] = useState<'batch' | 'teacher'>('batch');
-  const [selectedId, setSelectedId] = useState<string>('');
 
   if (!generatedTimetable) {
     return (
@@ -32,32 +37,44 @@ export function TimetableView() {
 
   const { entries, backlog, feasible, weekConfig } = generatedTimetable;
   const activeDays = DAYS.filter(d => !weekConfig.holidays.some(h => h.day === d));
-
-  const getEntries = (day: DayOfWeek, slot: SlotId) => {
-    return entries.filter(e => {
-      if (e.day !== day || e.slot !== slot) return false;
-      if (viewMode === 'batch') return e.batchId === selectedId;
-      return e.teacherId === selectedId;
-    });
-  };
-
-  const items = viewMode === 'batch'
-    ? batches.filter(b => b.active).map(b => ({ id: b.id, label: b.displayName }))
-    : teachers.filter(t => t.active).map(t => ({ id: t.id, label: `${t.name} (${t.code})` }));
-
-  if (!selectedId && items.length > 0) {
-    setSelectedId(items[0].id);
-  }
+  const activeBatches = batches.filter(b => b.active).sort((a, b) => {
+    // Sort: Droppers first (morning), then JEE, NEET, Junior
+    const order = { Droppers: 0, JEE: 1, NEET: 2, Junior: 3 };
+    return (order[a.category] ?? 4) - (order[b.category] ?? 4);
+  });
 
   const getTeacherCode = (id: string) => teachers.find(t => t.id === id)?.code || '?';
-  const getBatchName = (id: string) => batches.find(b => b.id === id)?.displayName || '?';
+
+  // Get batch's slots based on session
+  const getBatchSlots = (session: 'Morning' | 'Evening'): SlotTime[] => {
+    return SLOTS.filter(s => s.session === session);
+  };
+
+  // Get entry for a batch at a specific day+slot
+  const getEntry = (batchId: string, day: DayOfWeek, slotId: SlotId) => {
+    return entries.find(e => e.batchId === batchId && e.day === day && e.slot === slotId);
+  };
+
+  // Generate date labels for each day
+  const getDateLabel = (day: DayOfWeek) => {
+    const dayIndex = DAYS.indexOf(day);
+    if (weekConfig.startDate) {
+      const start = new Date(weekConfig.startDate);
+      // Find the Monday of the week
+      const date = new Date(start);
+      date.setDate(date.getDate() + dayIndex);
+      return `${date.getDate()}-${date.toLocaleString('en', { month: 'short' })}`;
+    }
+    return '';
+  };
 
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            {weekConfig.weekLabel}
+          <h2 className="text-xl font-bold text-foreground">
+            TIME TABLE : {weekConfig.weekLabel.toUpperCase()}
             {feasible ? (
               <CheckCircle2 className="w-5 h-5 text-success inline ml-2" />
             ) : (
@@ -66,55 +83,101 @@ export function TimetableView() {
           </h2>
           <p className="text-sm text-muted-foreground">{entries.length} classes · {backlog.length} backlog</p>
         </div>
-        <div className="flex gap-2">
-          <Select value={viewMode} onValueChange={(v) => { setViewMode(v as any); setSelectedId(''); }}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="batch">By Batch</SelectItem>
-              <SelectItem value="teacher">By Teacher</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={selectedId} onValueChange={setSelectedId}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Select..." /></SelectTrigger>
-            <SelectContent>
-              {items.map(item => <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
-      {/* Grid */}
-      <div className="overflow-x-auto">
-        <div className="inline-grid gap-0 min-w-[700px]" style={{ gridTemplateColumns: `100px repeat(${activeDays.length}, 1fr)` }}>
-          <div className="grid-cell-header">Slot</div>
-          {activeDays.map(d => <div key={d} className="grid-cell-header">{d}</div>)}
-
-          {SLOTS.map(slot => (
-            <>
-              <div key={`label-${slot.id}`} className="grid-cell bg-muted font-medium text-xs">
-                <div>
-                  <div>{slot.id}</div>
-                  <div className="text-muted-foreground text-[10px]">{slot.start}–{slot.end}</div>
-                </div>
-              </div>
-              {activeDays.map(day => {
-                const cellEntries = getEntries(day, slot.id);
+      {/* Main Grid - Horizontal layout matching reference */}
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="w-full border-collapse text-xs" style={{ minWidth: `${200 + activeBatches.length * 200}px` }}>
+          {/* Row 1: Batch names with category colors */}
+          <thead>
+            <tr>
+              <th className="border border-border bg-muted p-2 text-left font-bold min-w-[80px] sticky left-0 z-10" rowSpan={2}>BATCH</th>
+              <th className="border border-border bg-muted p-2 text-left font-bold min-w-[60px] sticky left-[80px] z-10" rowSpan={2}>DATE | TIME</th>
+              {activeBatches.map(batch => {
+                const slots = getBatchSlots(batch.slotSession);
+                const colorClass = BATCH_HEADER_COLORS[batch.category] || 'bg-muted';
                 return (
-                  <div key={`${slot.id}-${day}`} className={`grid-cell ${cellEntries.length > 0 ? '' : 'bg-card'}`}>
-                    {cellEntries.map((e, i) => (
-                      <div key={i} className={`rounded px-1.5 py-1 text-xs border ${SUBJECT_COLORS[e.subject] || 'bg-muted'}`}>
-                        <div className="font-semibold">{e.subject}</div>
-                        <div className="text-[10px] opacity-75">
-                          {viewMode === 'batch' ? getTeacherCode(e.teacherId) : getBatchName(e.batchId)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <th
+                    key={batch.id}
+                    colSpan={slots.length}
+                    className={`border border-border p-2 text-center font-bold ${colorClass}`}
+                  >
+                    <div className="text-xs font-bold">{batch.displayName}</div>
+                  </th>
                 );
               })}
-            </>
-          ))}
-        </div>
+            </tr>
+            {/* Row 2: Time slots per batch */}
+            <tr>
+              {activeBatches.map(batch => {
+                const slots = getBatchSlots(batch.slotSession);
+                return slots.map(slot => (
+                  <th key={`${batch.id}-${slot.id}`} className="border border-border bg-muted p-1 text-center text-[10px] font-medium">
+                    <div>{slot.start}</div>
+                    <div>{slot.end}</div>
+                  </th>
+                ));
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {activeDays.map(day => {
+              const dateLabel = getDateLabel(day);
+              const dayColor = DAY_ROW_COLORS[day] || '';
+              return (
+                <>
+                  {/* Day header row - Room assignments */}
+                  <tr key={`${day}-header`}>
+                    <td className={`border border-border p-2 font-bold text-xs uppercase sticky left-0 z-10 ${dayColor}`} rowSpan={2}>
+                      {day === 'Mon' ? 'MONDAY' : day === 'Tue' ? 'TUESDAY' : day === 'Wed' ? 'WEDNESDAY' : day === 'Thu' ? 'THURSDAY' : day === 'Fri' ? 'FRIDAY' : 'SATURDAY'}
+                    </td>
+                    <td className={`border border-border p-1 text-[10px] font-medium sticky left-[80px] z-10 ${dayColor}`}>
+                      {dateLabel}
+                    </td>
+                    {activeBatches.map(batch => {
+                      const slots = getBatchSlots(batch.slotSession);
+                      // Show room spanning all slots for this batch
+                      const batchEntries = entries.filter(e => e.batchId === batch.id && e.day === day);
+                      const room = batchEntries.length > 0 ? batchEntries[0].room : batch.defaultRoom;
+                      return slots.map((slot, i) => {
+                        if (i === 0) {
+                          return (
+                            <td
+                              key={`${batch.id}-${day}-room`}
+                              colSpan={slots.length}
+                              className={`border border-border p-1 text-center text-[10px] font-medium text-muted-foreground ${dayColor}`}
+                            >
+                              {room.replace('R', 'ROOM - 0')}
+                            </td>
+                          );
+                        }
+                        return null;
+                      });
+                    })}
+                  </tr>
+                  {/* Teacher codes row */}
+                  <tr key={`${day}-teachers`}>
+                    <td className={`border border-border p-1 text-[10px] sticky left-[80px] z-10 ${dayColor}`}></td>
+                    {activeBatches.map(batch => {
+                      const slots = getBatchSlots(batch.slotSession);
+                      return slots.map(slot => {
+                        const entry = getEntry(batch.id, day, slot.id);
+                        return (
+                          <td
+                            key={`${batch.id}-${day}-${slot.id}`}
+                            className={`border border-border p-1 text-center font-bold text-xs ${dayColor} ${entry ? '' : 'text-muted-foreground/30'}`}
+                          >
+                            {entry ? getTeacherCode(entry.teacherId) : ''}
+                          </td>
+                        );
+                      });
+                    })}
+                  </tr>
+                </>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Backlog */}
@@ -124,13 +187,16 @@ export function TimetableView() {
             <AlertTriangle className="w-4 h-4 text-warning" /> Backlog ({backlog.length})
           </h3>
           <div className="space-y-1">
-            {backlog.map((b, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                <Badge variant="outline" className="text-xs">{getBatchName(b.batchId)}</Badge>
-                <span>{b.subject} – {b.classesShort} classes short</span>
-                <span className="text-muted-foreground text-xs">({b.reason})</span>
-              </div>
-            ))}
+            {backlog.map((b, i) => {
+              const batchName = batches.find(bt => bt.id === b.batchId)?.displayName || '?';
+              return (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <Badge variant="outline" className="text-xs">{batchName}</Badge>
+                  <span>{b.subject} – {b.classesShort} classes short</span>
+                  <span className="text-muted-foreground text-xs">({b.reason})</span>
+                </div>
+              );
+            })}
           </div>
         </Card>
       )}
