@@ -130,6 +130,7 @@ export const useTimetableStore = create<TimetableStore>()(
       mappings: [],
       distributions: initDistributions(defaultBatches),
       mergeRules: [],
+      teacherPairs: [],
       weekConfig: {
         weekLabel: 'Week 1',
         startDate: new Date().toISOString().split('T')[0],
