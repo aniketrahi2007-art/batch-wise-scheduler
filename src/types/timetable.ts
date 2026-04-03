@@ -1,4 +1,4 @@
-export type Subject = 'Physics' | 'Chemistry' | 'Maths' | 'Biology' | 'English' | 'Hindi' | 'Sanskrit';
+export type Subject = 'Physics' | 'Chemistry' | 'Maths' | 'Biology' | 'English' | 'Hindi' | 'Sanskrit' | 'SST' | 'Science';
 
 export type BatchCategory = 'Junior' | 'JEE' | 'NEET' | 'Droppers';
 
@@ -21,6 +21,7 @@ export interface Batch {
   category: BatchCategory;
   subjects: Subject[];
   defaultRoom: string;
+  slotSession: 'Morning' | 'Evening'; // which 3 slots this batch uses
   active: boolean;
   locked: boolean; // manual lock
 }

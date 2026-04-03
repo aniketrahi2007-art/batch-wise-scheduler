@@ -7,18 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Edit2, Save, X, Lock } from 'lucide-react';
+import { Plus, Trash2, Save, X, Lock, Sun, Moon } from 'lucide-react';
 
-const ALL_SUBJECTS: Subject[] = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit'];
+const ALL_SUBJECTS: Subject[] = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit', 'SST', 'Science'];
 const CATEGORIES: BatchCategory[] = ['Junior', 'JEE', 'NEET', 'Droppers'];
 
 export function BatchManager() {
   const { batches, rooms, addBatch, updateBatch, removeBatch } = useTimetableStore();
   const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: '', displayName: '', category: 'Junior' as BatchCategory,
-    subjects: [] as Subject[], defaultRoom: 'R1',
+    displayName: '', category: 'Junior' as BatchCategory,
+    subjects: [] as Subject[], defaultRoom: 'R1', slotSession: 'Evening' as 'Morning' | 'Evening',
   });
 
   const handleAdd = () => {
@@ -30,10 +29,11 @@ export function BatchManager() {
       category: form.category,
       subjects: form.subjects,
       defaultRoom: form.defaultRoom,
+      slotSession: form.slotSession,
       active: true,
       locked: false,
     });
-    setForm({ name: '', displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1' });
+    setForm({ displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1', slotSession: 'Evening' });
     setAdding(false);
   };
 
@@ -49,27 +49,6 @@ export function BatchManager() {
     batches: batches.filter(b => b.category === cat),
   }));
 
-  const FormFields = () => (
-    <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
-        <Input placeholder="Display Name" value={form.displayName} onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))} />
-        <Select value={form.category} onValueChange={(v) => setForm(f => ({ ...f, category: v as BatchCategory }))}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-        </Select>
-        <Select value={form.defaultRoom} onValueChange={(v) => setForm(f => ({ ...f, defaultRoom: v }))}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>{rooms.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {ALL_SUBJECTS.map(s => (
-          <Badge key={s} variant={form.subjects.includes(s) ? 'default' : 'outline'} className="cursor-pointer text-xs" onClick={() => toggleSubject(s)}>{s}</Badge>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -84,7 +63,29 @@ export function BatchManager() {
 
       {adding && (
         <Card className="p-4 space-y-3 border-primary/30">
-          <FormFields />
+          <div className="grid grid-cols-4 gap-2">
+            <Input placeholder="Display Name" value={form.displayName} onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))} />
+            <Select value={form.category} onValueChange={(v) => setForm(f => ({ ...f, category: v as BatchCategory }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={form.defaultRoom} onValueChange={(v) => setForm(f => ({ ...f, defaultRoom: v }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{rooms.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={form.slotSession} onValueChange={(v) => setForm(f => ({ ...f, slotSession: v as any }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Morning">Morning</SelectItem>
+                <SelectItem value="Evening">Evening</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_SUBJECTS.map(s => (
+              <Badge key={s} variant={form.subjects.includes(s) ? 'default' : 'outline'} className="cursor-pointer text-xs" onClick={() => toggleSubject(s)}>{s}</Badge>
+            ))}
+          </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={handleAdd}><Save className="w-3 h-3 mr-1" /> Save</Button>
             <Button size="sm" variant="ghost" onClick={() => setAdding(false)}><X className="w-3 h-3 mr-1" /> Cancel</Button>
@@ -92,7 +93,7 @@ export function BatchManager() {
         </Card>
       )}
 
-      {grouped.map(g => (
+      {grouped.map(g => g.batches.length > 0 && (
         <div key={g.category}>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">{g.category}</h3>
           <div className="space-y-1.5">
@@ -102,6 +103,7 @@ export function BatchManager() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground">{b.displayName}</span>
                     <Badge variant="secondary" className="text-xs">{b.defaultRoom}</Badge>
+                    {b.slotSession === 'Morning' ? <Sun className="w-3 h-3 text-warning" /> : <Moon className="w-3 h-3 text-info" />}
                     {b.locked && <Lock className="w-3 h-3 text-warning" />}
                   </div>
                   <div className="flex gap-1 mt-1">

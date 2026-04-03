@@ -45,11 +45,13 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
   const classesNeeded: Map<string, Map<Subject, number>> = new Map();
 
   for (const batch of activeBatches) {
-    const batchDists = distributions.filter(d => d.batchId === batch.id);
+    const batchDists = distributions.filter(d => d.batchId === batch.id && d.percentage > 0);
     const batchClasses = new Map<Subject, number>();
+    // Each batch has 3 slots per day (morning or evening)
+    const totalBatchSlots = activeDays.length * 3;
     for (const dist of batchDists) {
-      const classes = Math.round((dist.percentage / 100) * (activeDays.length * 3)); // ~3 slots per day per batch
-      batchClasses.set(dist.subject, Math.max(1, classes));
+      const classes = Math.round((dist.percentage / 100) * totalBatchSlots);
+      if (classes > 0) batchClasses.set(dist.subject, classes);
     }
     classesNeeded.set(batch.id, batchClasses);
   }
@@ -95,6 +97,9 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     const needed = classesNeeded.get(batch.id);
     if (!needed) continue;
 
+    // Only use the batch's session slots
+    const batchSlots = SLOTS.filter(s => s.session === batch.slotSession);
+
     const batchMappings = mappings.filter(m => m.batchId === batch.id);
     const assigned = new Map<Subject, number>();
     batch.subjects.forEach(s => assigned.set(s, 0));
@@ -138,7 +143,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
           const sameSubjectToday = daySubjects.filter(s => s === subject).length;
           if (sameSubjectToday >= 1 && round === 0) continue; // First pass: max 1 per day
 
-          for (const slot of SLOTS) {
+          for (const slot of batchSlots) {
             if (classesAssigned >= count) break;
             if (!isSlotFree(batch.id, batchSchedule, day, slot.id)) continue;
 
