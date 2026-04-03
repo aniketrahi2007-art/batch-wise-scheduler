@@ -126,23 +126,58 @@ export function BatchManager() {
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">{g.category}</h3>
           <div className="space-y-1.5">
             {g.batches.map(b => (
-              <Card key={b.id} className={`p-3 flex items-center gap-3 ${!b.active ? 'opacity-50' : ''}`}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground">{b.displayName}</span>
-                    <Badge variant="secondary" className="text-xs">{b.defaultRoom}</Badge>
-                    {b.slotSession === 'Morning' ? <Sun className="w-3 h-3 text-warning" /> : <Moon className="w-3 h-3 text-info" />}
-                    {b.locked && <Lock className="w-3 h-3 text-warning" />}
+              <Card key={b.id} className={`p-3 ${!b.active ? 'opacity-50' : ''} ${editing === b.id ? 'border-primary/30' : ''}`}>
+                {editing === b.id ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-4 gap-2">
+                      <Input value={form.displayName} onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))} />
+                      <Select value={form.category} onValueChange={(v) => setForm(f => ({ ...f, category: v as BatchCategory }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={form.defaultRoom} onValueChange={(v) => setForm(f => ({ ...f, defaultRoom: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{rooms.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Select value={form.slotSession} onValueChange={(v) => setForm(f => ({ ...f, slotSession: v as any }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Morning">Morning</SelectItem>
+                          <SelectItem value="Evening">Evening</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ALL_SUBJECTS.map(s => (
+                        <Badge key={s} variant={form.subjects.includes(s) ? 'default' : 'outline'} className="cursor-pointer text-xs" onClick={() => toggleSubject(s)}>{s}</Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => handleSave(b.id)}><Save className="w-3 h-3 mr-1" /> Save</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditing(null); resetForm(); }}><X className="w-3 h-3 mr-1" /> Cancel</Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1 mt-1">
-                    {b.subjects.map(s => <Badge key={s} variant="outline" className="text-xs">{s}</Badge>)}
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{b.displayName}</span>
+                        <Badge variant="secondary" className="text-xs">{b.defaultRoom}</Badge>
+                        {b.slotSession === 'Morning' ? <Sun className="w-3 h-3 text-warning" /> : <Moon className="w-3 h-3 text-info" />}
+                        {b.locked && <Lock className="w-3 h-3 text-warning" />}
+                      </div>
+                      <div className="flex gap-1 mt-1">
+                        {b.subjects.map(s => <Badge key={s} variant="outline" className="text-xs">{s}</Badge>)}
+                      </div>
+                    </div>
+                    <Switch checked={b.active} onCheckedChange={(v) => updateBatch(b.id, { active: v })} />
+                    <Button size="icon" variant="ghost" onClick={() => startEdit(b)}><Edit2 className="w-4 h-4" /></Button>
+                    <Button size="icon" variant={b.locked ? 'default' : 'ghost'} onClick={() => updateBatch(b.id, { locked: !b.locked })} title={b.locked ? 'Unlock' : 'Lock'}>
+                      <Lock className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => removeBatch(b.id)}><Trash2 className="w-4 h-4" /></Button>
                   </div>
-                </div>
-                <Switch checked={b.active} onCheckedChange={(v) => updateBatch(b.id, { active: v })} />
-                <Button size="icon" variant={b.locked ? 'default' : 'ghost'} onClick={() => updateBatch(b.id, { locked: !b.locked })} title={b.locked ? 'Unlock' : 'Lock'}>
-                  <Lock className="w-4 h-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => removeBatch(b.id)}><Trash2 className="w-4 h-4" /></Button>
+                )}
               </Card>
             ))}
           </div>
