@@ -84,7 +84,7 @@ export function BatchManager() {
           <h2 className="text-lg font-semibold text-foreground">Batches</h2>
           <p className="text-sm text-muted-foreground">{batches.length} batches across {CATEGORIES.length} categories</p>
         </div>
-        <Button onClick={() => setAdding(true)} size="sm" disabled={adding}>
+        <Button onClick={() => { setAdding(true); setEditing(null); resetForm(); }} size="sm" disabled={adding}>
           <Plus className="w-4 h-4 mr-1" /> Add Batch
         </Button>
       </div>
