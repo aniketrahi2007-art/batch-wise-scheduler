@@ -204,6 +204,8 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
       .sort((a, b) => b[1] - a[1]);
 
     for (const [subject, count] of subjectsToSchedule) {
+      // Skip if handled by merge rule
+      if (mergedBatchSubjects.has(`${batch.id}|${subject}`)) continue;
       // Find eligible teachers
       const eligibleTeachers = batchMappings
         .filter(m => m.subject === subject)
