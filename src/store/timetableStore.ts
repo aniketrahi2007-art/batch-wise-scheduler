@@ -228,6 +228,9 @@ export const useTimetableStore = create<TimetableStore>()(
       addMergeRule: (rule) => set(s => ({ mergeRules: [...s.mergeRules, rule] })),
       removeMergeRule: (id) => set(s => ({ mergeRules: s.mergeRules.filter(r => r.id !== id) })),
 
+      addTeacherPair: (pair) => set(s => ({ teacherPairs: [...s.teacherPairs, pair] })),
+      removeTeacherPair: (id) => set(s => ({ teacherPairs: s.teacherPairs.filter(p => p.id !== id) })),
+
       setWeekConfig: (w) => set(s => ({ weekConfig: { ...s.weekConfig, ...w } })),
       setGeneratedTimetable: (t) => set({ generatedTimetable: t }),
     }),

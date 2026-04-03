@@ -67,6 +67,25 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
 
   const slotKey = (day: DayOfWeek, slot: SlotId) => `${day}-${slot}`;
 
+  // Build teacher pair lookup: teacherId -> set of paired teacher IDs
+  const pairedTeachers = new Map<string, Set<string>>();
+  for (const pair of teacherPairs) {
+    const [a, b] = pair.teacherIds;
+    if (!pairedTeachers.has(a)) pairedTeachers.set(a, new Set());
+    if (!pairedTeachers.has(b)) pairedTeachers.set(b, new Set());
+    pairedTeachers.get(a)!.add(b);
+    pairedTeachers.get(b)!.add(a);
+  }
+
+  const isPairedTeacherFree = (teacherId: string, day: DayOfWeek, slot: SlotId): boolean => {
+    const partners = pairedTeachers.get(teacherId);
+    if (!partners) return true;
+    for (const partnerId of partners) {
+      if (!isSlotFree(partnerId, teacherSchedule, day, slot)) return false;
+    }
+    return true;
+  };
+
   const isSlotFree = (entityId: string, schedule: Map<string, Set<string>>, day: DayOfWeek, slot: SlotId): boolean => {
     const key = slotKey(day, slot);
     return !(schedule.get(entityId)?.has(key));
