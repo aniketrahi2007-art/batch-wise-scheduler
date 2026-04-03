@@ -214,6 +214,6 @@ export const useTimetableStore = create<TimetableStore>()(
       setWeekConfig: (w) => set(s => ({ weekConfig: { ...s.weekConfig, ...w } })),
       setGeneratedTimetable: (t) => set({ generatedTimetable: t }),
     }),
-    { name: 'timetable-store' }
+    { name: 'timetable-store', version: 2 }
   )
 );
