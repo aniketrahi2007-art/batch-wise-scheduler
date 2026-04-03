@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Teacher, Batch, Room, TeacherAvailability, TeacherBatchMapping,
-  SubjectDistribution, WeekConfig, GeneratedTimetable, MergeRule,
+  SubjectDistribution, WeekConfig, GeneratedTimetable, MergeRule, TeacherPair,
   DAYS, SLOTS, DayOfWeek, SlotId, Subject
 } from '@/types/timetable';
 import { defaultTeachers, defaultBatches, defaultRooms, categoryDistributions } from '@/data/defaults';
@@ -24,6 +24,7 @@ interface TimetableStore {
 
   // Merge rules
   mergeRules: MergeRule[];
+  teacherPairs: TeacherPair[];
 
   // Week config
   weekConfig: WeekConfig;
@@ -64,6 +65,10 @@ interface TimetableStore {
   // Merge
   addMergeRule: (rule: MergeRule) => void;
   removeMergeRule: (id: string) => void;
+
+  // Teacher pairs
+  addTeacherPair: (pair: TeacherPair) => void;
+  removeTeacherPair: (id: string) => void;
 
   // Week
   setWeekConfig: (w: Partial<WeekConfig>) => void;
@@ -125,6 +130,7 @@ export const useTimetableStore = create<TimetableStore>()(
       mappings: [],
       distributions: initDistributions(defaultBatches),
       mergeRules: [],
+      teacherPairs: [],
       weekConfig: {
         weekLabel: 'Week 1',
         startDate: new Date().toISOString().split('T')[0],
@@ -221,6 +227,9 @@ export const useTimetableStore = create<TimetableStore>()(
 
       addMergeRule: (rule) => set(s => ({ mergeRules: [...s.mergeRules, rule] })),
       removeMergeRule: (id) => set(s => ({ mergeRules: s.mergeRules.filter(r => r.id !== id) })),
+
+      addTeacherPair: (pair) => set(s => ({ teacherPairs: [...s.teacherPairs, pair] })),
+      removeTeacherPair: (id) => set(s => ({ teacherPairs: s.teacherPairs.filter(p => p.id !== id) })),
 
       setWeekConfig: (w) => set(s => ({ weekConfig: { ...s.weekConfig, ...w } })),
       setGeneratedTimetable: (t) => set({ generatedTimetable: t }),

@@ -1,7 +1,7 @@
 import {
   Teacher, Batch, Room, TeacherAvailability, TeacherBatchMapping,
   SubjectDistribution, WeekConfig, GeneratedTimetable, TimetableEntry,
-  BacklogItem, MergeRule, DAYS, SLOTS, DayOfWeek, SlotId, Subject
+  BacklogItem, MergeRule, TeacherPair, DAYS, SLOTS, DayOfWeek, SlotId, Subject
 } from '@/types/timetable';
 
 interface SchedulerInput {
@@ -12,11 +12,12 @@ interface SchedulerInput {
   mappings: TeacherBatchMapping[];
   distributions: SubjectDistribution[];
   mergeRules: MergeRule[];
+  teacherPairs: TeacherPair[];
   weekConfig: WeekConfig;
 }
 
 export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
-  const { teachers, batches, rooms, availability, mappings, distributions, mergeRules, weekConfig } = input;
+  const { teachers, batches, rooms, availability, mappings, distributions, mergeRules, teacherPairs, weekConfig } = input;
   const entries: TimetableEntry[] = [];
   const backlog: BacklogItem[] = [];
   const errors: string[] = [];
@@ -65,6 +66,25 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
   const teacherDayHours: Map<string, Map<DayOfWeek, number>> = new Map();
 
   const slotKey = (day: DayOfWeek, slot: SlotId) => `${day}-${slot}`;
+
+  // Build teacher pair lookup: teacherId -> set of paired teacher IDs
+  const pairedTeachers = new Map<string, Set<string>>();
+  for (const pair of teacherPairs) {
+    const [a, b] = pair.teacherIds;
+    if (!pairedTeachers.has(a)) pairedTeachers.set(a, new Set());
+    if (!pairedTeachers.has(b)) pairedTeachers.set(b, new Set());
+    pairedTeachers.get(a)!.add(b);
+    pairedTeachers.get(b)!.add(a);
+  }
+
+  const isPairedTeacherFree = (teacherId: string, day: DayOfWeek, slot: SlotId): boolean => {
+    const partners = pairedTeachers.get(teacherId);
+    if (!partners) return true;
+    for (const partnerId of partners) {
+      if (!isSlotFree(partnerId, teacherSchedule, day, slot)) return false;
+    }
+    return true;
+  };
 
   const isSlotFree = (entityId: string, schedule: Map<string, Set<string>>, day: DayOfWeek, slot: SlotId): boolean => {
     const key = slotKey(day, slot);
@@ -127,6 +147,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
           if (classesAssigned >= maxNeeded) break;
           if (!teacherSlots.includes(slot.id)) continue;
           if (!isSlotFree(teacher.id, teacherSchedule, day, slot.id)) continue;
+          if (!isPairedTeacherFree(teacher.id, day, slot.id)) continue;
           if (!isSlotFree(roomId, roomSchedule, day, slot.id)) continue;
 
           // Check all merged batches are free in this slot
@@ -247,6 +268,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
               const teacherSlots = getTeacherSlots(teacher.id, day);
               if (!teacherSlots.includes(slot.id)) continue;
               if (!isSlotFree(teacher.id, teacherSchedule, day, slot.id)) continue;
+              if (!isPairedTeacherFree(teacher.id, day, slot.id)) continue;
 
               // Check teacher max 6 hours per day
               if (!teacherDayHours.has(teacher.id)) teacherDayHours.set(teacher.id, new Map());

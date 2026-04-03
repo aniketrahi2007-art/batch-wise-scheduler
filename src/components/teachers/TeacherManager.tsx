@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTimetableStore } from '@/store/timetableStore';
+import { TeacherPairs } from './TeacherPairs';
 import { Teacher, Subject } from '@/types/timetable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,6 +127,8 @@ export function TeacherManager() {
           </Card>
         ))}
       </div>
+
+      <TeacherPairs />
     </div>
   );
 }
