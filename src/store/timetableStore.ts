@@ -66,6 +66,10 @@ interface TimetableStore {
   addMergeRule: (rule: MergeRule) => void;
   removeMergeRule: (id: string) => void;
 
+  // Teacher pairs
+  addTeacherPair: (pair: TeacherPair) => void;
+  removeTeacherPair: (id: string) => void;
+
   // Week
   setWeekConfig: (w: Partial<WeekConfig>) => void;
 
