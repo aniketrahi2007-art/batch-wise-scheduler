@@ -161,9 +161,20 @@ export const useTimetableStore = create<TimetableStore>()(
         }));
         return { batches: [...s.batches, b], distributions: [...s.distributions, ...newDists] };
       }),
-      updateBatch: (id, data) => set(s => ({
-        batches: s.batches.map(b => b.id === id ? { ...b, ...data } : b),
-      })),
+      updateBatch: (id, data) => set(s => {
+        const updated = s.batches.map(b => b.id === id ? { ...b, ...data } : b);
+        const batch = updated.find(b => b.id === id)!;
+        // Sync distributions when subjects change
+        if (data.subjects) {
+          const existing = s.distributions.filter(d => d.batchId === id);
+          const kept = existing.filter(d => batch.subjects.includes(d.subject));
+          const newSubjects = batch.subjects.filter(sub => !existing.find(d => d.subject === sub));
+          const newDists = newSubjects.map(sub => ({ batchId: id, subject: sub, percentage: 0 }));
+          const otherDists = s.distributions.filter(d => d.batchId !== id);
+          return { batches: updated, distributions: [...otherDists, ...kept, ...newDists] };
+        }
+        return { batches: updated };
+      }),
       removeBatch: (id) => set(s => ({
         batches: s.batches.filter(b => b.id !== id),
         mappings: s.mappings.filter(m => m.batchId !== id),
