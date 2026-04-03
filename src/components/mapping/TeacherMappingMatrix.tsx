@@ -56,7 +56,7 @@ export function TeacherMappingMatrix() {
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
-              {(['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit'] as Subject[]).map(s => (
+              {(['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit', 'SST', 'Science'] as Subject[]).map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>
