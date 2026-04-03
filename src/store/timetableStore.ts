@@ -24,6 +24,7 @@ interface TimetableStore {
 
   // Merge rules
   mergeRules: MergeRule[];
+  teacherPairs: TeacherPair[];
 
   // Week config
   weekConfig: WeekConfig;
