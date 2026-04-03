@@ -89,8 +89,100 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     return true;
   };
 
-  // Main scheduling loop - iterate batches, assign slots
-  // Shuffle days and slots for variety
+  // ========== PHASE 1: Schedule merged batches first ==========
+  // Merged batches share the same slot, teacher, and room
+  const mergedBatchSubjects = new Set<string>(); // "batchId|subject" keys that are handled by merge
+
+  for (const rule of mergeRules) {
+    const mergeBatches = rule.batchIds
+      .map(id => batches.find(b => b.id === id))
+      .filter((b): b is Batch => !!b && b.active && !b.locked);
+    if (mergeBatches.length < 2) continue;
+
+    const teacher = teachers.find(t => t.id === rule.teacherId);
+    if (!teacher || !teacher.active) continue;
+
+    const session = mergeBatches[0].slotSession;
+    const mergeSlots = SLOTS.filter(s => s.session === session);
+    const roomId = mergeBatches[0].defaultRoom; // Use first batch's room
+
+    // How many classes needed? Use the max needed among merged batches
+    let maxNeeded = 0;
+    for (const mb of mergeBatches) {
+      const needed = classesNeeded.get(mb.id);
+      const count = needed?.get(rule.subject) || 0;
+      if (count > maxNeeded) maxNeeded = count;
+    }
+
+    let classesAssigned = 0;
+
+    for (let round = 0; round < Math.ceil(maxNeeded / activeDays.length) + 1 && classesAssigned < maxNeeded; round++) {
+      for (const day of activeDays) {
+        if (classesAssigned >= maxNeeded) break;
+
+        // Check teacher availability
+        const teacherSlots = getTeacherSlots(teacher.id, day);
+
+        for (const slot of mergeSlots) {
+          if (classesAssigned >= maxNeeded) break;
+          if (!teacherSlots.includes(slot.id)) continue;
+          if (!isSlotFree(teacher.id, teacherSchedule, day, slot.id)) continue;
+          if (!isSlotFree(roomId, roomSchedule, day, slot.id)) continue;
+
+          // Check all merged batches are free in this slot
+          const allFree = mergeBatches.every(mb => isSlotFree(mb.id, batchSchedule, day, slot.id));
+          if (!allFree) continue;
+
+          // Check teacher max hours
+          if (!teacherDayHours.has(teacher.id)) teacherDayHours.set(teacher.id, new Map());
+          const hours = teacherDayHours.get(teacher.id)!.get(day) || 0;
+          if (hours >= 5) continue;
+
+          // Assign merged class for all batches
+          for (const mb of mergeBatches) {
+            const entry: TimetableEntry = {
+              day,
+              slot: slot.id,
+              batchId: mb.id,
+              teacherId: teacher.id,
+              subject: rule.subject,
+              room: roomId,
+              merged: rule.batchIds.filter(id => id !== mb.id),
+            };
+            entries.push(entry);
+            assignSlot(mb.id, batchSchedule, day, slot.id);
+
+            if (!batchDaySubjects.has(mb.id)) batchDaySubjects.set(mb.id, new Map());
+            if (!batchDaySubjects.get(mb.id)!.has(day)) batchDaySubjects.get(mb.id)!.set(day, []);
+            batchDaySubjects.get(mb.id)!.get(day)!.push(rule.subject);
+          }
+
+          assignSlot(teacher.id, teacherSchedule, day, slot.id);
+          assignSlot(roomId, roomSchedule, day, slot.id);
+          teacherDayHours.get(teacher.id)!.set(day, hours + 1);
+
+          classesAssigned++;
+          break; // One per day per round
+        }
+      }
+    }
+
+    // Mark these batch+subject combos as handled
+    for (const mb of mergeBatches) {
+      mergedBatchSubjects.add(`${mb.id}|${rule.subject}`);
+    }
+
+    if (classesAssigned < maxNeeded) {
+      backlog.push({
+        batchId: mergeBatches.map(b => b.id).join('+'),
+        subject: rule.subject,
+        classesShort: maxNeeded - classesAssigned,
+        reason: `Merged class: insufficient slots`,
+      });
+    }
+  }
+
+  // ========== PHASE 2: Schedule remaining (non-merged) batch-subjects ==========
   const shuffledDays = [...activeDays];
   
   for (const batch of activeBatches) {
@@ -112,6 +204,8 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
       .sort((a, b) => b[1] - a[1]);
 
     for (const [subject, count] of subjectsToSchedule) {
+      // Skip if handled by merge rule
+      if (mergedBatchSubjects.has(`${batch.id}|${subject}`)) continue;
       // Find eligible teachers
       const eligibleTeachers = batchMappings
         .filter(m => m.subject === subject)

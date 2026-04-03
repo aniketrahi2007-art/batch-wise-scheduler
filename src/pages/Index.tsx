@@ -7,8 +7,9 @@ import { TeacherMappingMatrix } from '@/components/mapping/TeacherMappingMatrix'
 import { DistributionSettings } from '@/components/distribution/DistributionSettings';
 import { TimetableGenerator } from '@/components/generator/TimetableGenerator';
 import { TimetableView } from '@/components/timetable/TimetableView';
+import { MergeManager } from '@/components/merge/MergeManager';
 import {
-  Users, GraduationCap, DoorOpen, CalendarCheck, Grid3x3, PieChart, Play, Table2, LayoutDashboard
+  Users, GraduationCap, DoorOpen, CalendarCheck, Grid3x3, PieChart, Play, Table2, LayoutDashboard, Merge
 } from 'lucide-react';
 
 const tabs = [
@@ -18,6 +19,7 @@ const tabs = [
   { id: 'availability', label: 'Availability', icon: CalendarCheck },
   { id: 'mapping', label: 'Mapping', icon: Grid3x3 },
   { id: 'distribution', label: 'Distribution', icon: PieChart },
+  { id: 'merge', label: 'Merge', icon: Merge },
   { id: 'generate', label: 'Generate', icon: Play },
   { id: 'view', label: 'Timetable', icon: Table2 },
 ];
@@ -33,6 +35,7 @@ export default function Index() {
       case 'availability': return <AvailabilityGrid />;
       case 'mapping': return <TeacherMappingMatrix />;
       case 'distribution': return <DistributionSettings />;
+      case 'merge': return <MergeManager />;
       case 'generate': return <TimetableGenerator />;
       case 'view': return <TimetableView />;
       default: return <TeacherManager />;
