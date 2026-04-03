@@ -35,6 +35,7 @@ export default function Index() {
       case 'availability': return <AvailabilityGrid />;
       case 'mapping': return <TeacherMappingMatrix />;
       case 'distribution': return <DistributionSettings />;
+      case 'merge': return <MergeManager />;
       case 'generate': return <TimetableGenerator />;
       case 'view': return <TimetableView />;
       default: return <TeacherManager />;
