@@ -1,4 +1,4 @@
-export type Subject = 'Physics' | 'Chemistry' | 'Maths' | 'Biology' | 'English' | 'Hindi' | 'Sanskrit';
+export type Subject = 'Physics' | 'Chemistry' | 'Maths' | 'Biology' | 'English' | 'Hindi' | 'Sanskrit' | 'SST' | 'Science';
 
 export type BatchCategory = 'Junior' | 'JEE' | 'NEET' | 'Droppers';
 
