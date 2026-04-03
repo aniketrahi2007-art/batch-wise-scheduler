@@ -12,8 +12,25 @@ export default {
         "2xl": "1400px",
       },
     },
+    fontFamily: {
+      sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+      heading: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+      mono: ['JetBrains Mono', 'monospace'],
+    },
     extend: {
       colors: {
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
