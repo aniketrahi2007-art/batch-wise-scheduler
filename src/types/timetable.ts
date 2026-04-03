@@ -98,6 +98,12 @@ export interface MergeRule {
   teacherId: string;
 }
 
+export interface TeacherPair {
+  id: string;
+  teacherIds: [string, string];
+  label?: string;
+}
+
 export const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const SLOTS: SlotTime[] = [
