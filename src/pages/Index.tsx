@@ -7,8 +7,9 @@ import { TeacherMappingMatrix } from '@/components/mapping/TeacherMappingMatrix'
 import { DistributionSettings } from '@/components/distribution/DistributionSettings';
 import { TimetableGenerator } from '@/components/generator/TimetableGenerator';
 import { TimetableView } from '@/components/timetable/TimetableView';
+import { MergeManager } from '@/components/merge/MergeManager';
 import {
-  Users, GraduationCap, DoorOpen, CalendarCheck, Grid3x3, PieChart, Play, Table2, LayoutDashboard
+  Users, GraduationCap, DoorOpen, CalendarCheck, Grid3x3, PieChart, Play, Table2, LayoutDashboard, Merge
 } from 'lucide-react';
 
 const tabs = [
