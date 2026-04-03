@@ -19,6 +19,7 @@ const tabs = [
   { id: 'availability', label: 'Availability', icon: CalendarCheck },
   { id: 'mapping', label: 'Mapping', icon: Grid3x3 },
   { id: 'distribution', label: 'Distribution', icon: PieChart },
+  { id: 'merge', label: 'Merge', icon: Merge },
   { id: 'generate', label: 'Generate', icon: Play },
   { id: 'view', label: 'Timetable', icon: Table2 },
 ];
