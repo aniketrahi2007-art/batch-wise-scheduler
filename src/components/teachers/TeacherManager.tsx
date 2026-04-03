@@ -127,6 +127,8 @@ export function TeacherManager() {
           </Card>
         ))}
       </div>
+
+      <TeacherPairs />
     </div>
   );
 }
