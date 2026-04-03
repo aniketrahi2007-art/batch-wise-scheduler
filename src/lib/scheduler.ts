@@ -1,7 +1,7 @@
 import {
   Teacher, Batch, Room, TeacherAvailability, TeacherBatchMapping,
   SubjectDistribution, WeekConfig, GeneratedTimetable, TimetableEntry,
-  BacklogItem, MergeRule, DAYS, SLOTS, DayOfWeek, SlotId, Subject
+  BacklogItem, MergeRule, TeacherPair, DAYS, SLOTS, DayOfWeek, SlotId, Subject
 } from '@/types/timetable';
 
 interface SchedulerInput {
