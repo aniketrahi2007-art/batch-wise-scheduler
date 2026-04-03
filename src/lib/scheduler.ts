@@ -97,6 +97,9 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     const needed = classesNeeded.get(batch.id);
     if (!needed) continue;
 
+    // Only use the batch's session slots
+    const batchSlots = SLOTS.filter(s => s.session === batch.slotSession);
+
     const batchMappings = mappings.filter(m => m.batchId === batch.id);
     const assigned = new Map<Subject, number>();
     batch.subjects.forEach(s => assigned.set(s, 0));
