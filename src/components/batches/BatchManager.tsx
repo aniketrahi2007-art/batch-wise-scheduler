@@ -15,10 +15,38 @@ const CATEGORIES: BatchCategory[] = ['Junior', 'JEE', 'NEET', 'Droppers'];
 export function BatchManager() {
   const { batches, rooms, addBatch, updateBatch, removeBatch } = useTimetableStore();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({
     displayName: '', category: 'Junior' as BatchCategory,
     subjects: [] as Subject[], defaultRoom: 'R1', slotSession: 'Evening' as 'Morning' | 'Evening',
   });
+
+  const resetForm = () => setForm({ displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1', slotSession: 'Evening' });
+
+  const startEdit = (b: Batch) => {
+    setEditing(b.id);
+    setAdding(false);
+    setForm({
+      displayName: b.displayName,
+      category: b.category,
+      subjects: [...b.subjects],
+      defaultRoom: b.defaultRoom,
+      slotSession: b.slotSession,
+    });
+  };
+
+  const handleSave = (id: string) => {
+    updateBatch(id, {
+      displayName: form.displayName,
+      name: form.displayName.toLowerCase().replace(/\s+/g, '-'),
+      category: form.category,
+      subjects: form.subjects,
+      defaultRoom: form.defaultRoom,
+      slotSession: form.slotSession,
+    });
+    setEditing(null);
+    resetForm();
+  };
 
   const handleAdd = () => {
     if (!form.displayName) return;
