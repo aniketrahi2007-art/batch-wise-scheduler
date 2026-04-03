@@ -87,19 +87,30 @@ function initAvailability(teachers: Teacher[]): TeacherAvailability[] {
   return result;
 }
 
-// Initialize distributions with equal split
+// Initialize distributions using category templates where available
 function initDistributions(batches: Batch[]): SubjectDistribution[] {
   const result: SubjectDistribution[] = [];
   for (const b of batches) {
-    const pct = Math.floor(100 / b.subjects.length);
-    const remainder = 100 - pct * b.subjects.length;
-    b.subjects.forEach((s, i) => {
+    // Try to find a category distribution template
+    let template = categoryDistributions[b.category];
+    if (!template) {
+      // Fallback: equal split
+      const pct = Math.floor(100 / b.subjects.length);
+      const remainder = 100 - pct * b.subjects.length;
+      template = b.subjects.map((s, i) => ({
+        subject: s,
+        percentage: pct + (i === b.subjects.length - 1 ? remainder : 0),
+      }));
+    }
+    // Only include subjects that the batch actually has
+    for (const s of b.subjects) {
+      const tmpl = template.find(t => t.subject === s);
       result.push({
         batchId: b.id,
         subject: s,
-        percentage: pct + (i === b.subjects.length - 1 ? remainder : 0),
+        percentage: tmpl ? tmpl.percentage : 0,
       });
-    });
+    }
   }
   return result;
 }
