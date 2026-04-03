@@ -17,7 +17,7 @@ interface SchedulerInput {
 }
 
 export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
-  const { teachers, batches, rooms, availability, mappings, distributions, mergeRules, weekConfig } = input;
+  const { teachers, batches, rooms, availability, mappings, distributions, mergeRules, teacherPairs, weekConfig } = input;
   const entries: TimetableEntry[] = [];
   const backlog: BacklogItem[] = [];
   const errors: string[] = [];
