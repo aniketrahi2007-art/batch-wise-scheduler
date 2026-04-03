@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, Edit2, Save, X } from 'lucide-react';
 
-const ALL_SUBJECTS: Subject[] = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit'];
+const ALL_SUBJECTS: Subject[] = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit', 'SST', 'Science'];
 
 export function TeacherManager() {
   const { teachers, addTeacher, updateTeacher, removeTeacher } = useTimetableStore();
