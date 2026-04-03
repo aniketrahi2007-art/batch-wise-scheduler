@@ -5,7 +5,7 @@ import {
   SubjectDistribution, WeekConfig, GeneratedTimetable, MergeRule,
   DAYS, SLOTS, DayOfWeek, SlotId, Subject
 } from '@/types/timetable';
-import { defaultTeachers, defaultBatches, defaultRooms } from '@/data/defaults';
+import { defaultTeachers, defaultBatches, defaultRooms, categoryDistributions } from '@/data/defaults';
 
 interface TimetableStore {
   // Master data
