@@ -12,6 +12,7 @@ interface SchedulerInput {
   mappings: TeacherBatchMapping[];
   distributions: SubjectDistribution[];
   mergeRules: MergeRule[];
+  teacherPairs: TeacherPair[];
   weekConfig: WeekConfig;
 }
 
