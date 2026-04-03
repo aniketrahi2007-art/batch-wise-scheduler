@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Save, X, Lock, Sun, Moon } from 'lucide-react';
+import { Plus, Trash2, Save, X, Lock, Sun, Moon, Edit2 } from 'lucide-react';
 
 const ALL_SUBJECTS: Subject[] = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit', 'SST', 'Science'];
 const CATEGORIES: BatchCategory[] = ['Junior', 'JEE', 'NEET', 'Droppers'];
