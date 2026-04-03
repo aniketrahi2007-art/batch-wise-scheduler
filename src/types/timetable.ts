@@ -21,6 +21,7 @@ export interface Batch {
   category: BatchCategory;
   subjects: Subject[];
   defaultRoom: string;
+  slotSession: 'Morning' | 'Evening'; // which 3 slots this batch uses
   active: boolean;
   locked: boolean; // manual lock
 }
