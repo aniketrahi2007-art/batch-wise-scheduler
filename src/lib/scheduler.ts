@@ -143,7 +143,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
           const sameSubjectToday = daySubjects.filter(s => s === subject).length;
           if (sameSubjectToday >= 1 && round === 0) continue; // First pass: max 1 per day
 
-          for (const slot of SLOTS) {
+          for (const slot of batchSlots) {
             if (classesAssigned >= count) break;
             if (!isSlotFree(batch.id, batchSchedule, day, slot.id)) continue;
 
