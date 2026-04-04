@@ -1,4 +1,4 @@
-import { Teacher, Batch, Room, Subject } from '@/types/timetable';
+import { Teacher, Batch, Room, Subject, DAYS } from '@/types/timetable';
 
 export const defaultTeachers: Teacher[] = [
   { id: 't1', name: 'Atul Sir', code: 'CKA', subjects: ['Chemistry'], active: true },
