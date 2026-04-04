@@ -1,4 +1,4 @@
-import { Teacher, Batch, Room, Subject, DAYS } from '@/types/timetable';
+import { Teacher, Batch, Room, Subject, DAYS, DayOfWeek } from '@/types/timetable';
 
 export const defaultTeachers: Teacher[] = [
   { id: 't1', name: 'Atul Sir', code: 'CKA', subjects: ['Chemistry'], active: true },
@@ -13,30 +13,32 @@ export const defaultTeachers: Teacher[] = [
   { id: 't10', name: 'Siddhart Sir', code: 'SSM', subjects: ['Biology'], active: true },
 ];
 
+const allDays: DayOfWeek[] = [...DAYS];
+
 export const defaultBatches: Batch[] = [
   // Junior - CBSE+ (evening batches)
-  { id: 'b1', name: 'class-6', displayName: 'Class 6', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R1', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b2', name: 'class-7', displayName: 'Class 7', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R2', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b3', name: 'class-8-cbse', displayName: 'Class 8 (CBSE)', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R3', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b4', name: 'aarambh', displayName: 'Aarambh (8)', category: 'Junior', subjects: ['Biology', 'Maths', 'SST', 'Science'], defaultRoom: 'R3', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b5', name: 'class-9-cbse', displayName: 'Class 9 (CBSE)', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R4', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b6', name: 'arpan', displayName: 'Arpan (9)', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics', 'Science'], defaultRoom: 'R4', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b7', name: 'aryabhatt', displayName: 'Aryabhatt', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics'], defaultRoom: 'R5', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b8', name: 'class-10-cbse', displayName: 'Class 10 (CBSE)', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R5', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b9', name: 'aarohan', displayName: 'Aarohan', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics'], defaultRoom: 'R5', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b10', name: 'ramanujhan', displayName: 'Ramanujhan', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics'], defaultRoom: 'R6', slotSession: 'Evening', active: true, locked: false },
+  { id: 'b1', name: 'class-6', displayName: 'Class 6', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R1', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b2', name: 'class-7', displayName: 'Class 7', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R2', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b3', name: 'class-8-cbse', displayName: 'Class 8 (CBSE)', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R3', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b4', name: 'aarambh', displayName: 'Aarambh (8)', category: 'Junior', subjects: ['Biology', 'Maths', 'SST', 'Science'], defaultRoom: 'R3', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b5', name: 'class-9-cbse', displayName: 'Class 9 (CBSE)', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R4', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b6', name: 'arpan', displayName: 'Arpan (9)', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics', 'Science'], defaultRoom: 'R4', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b7', name: 'aryabhatt', displayName: 'Aryabhatt', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics'], defaultRoom: 'R5', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b8', name: 'class-10-cbse', displayName: 'Class 10 (CBSE)', category: 'Junior', subjects: ['Biology', 'English', 'Maths', 'SST', 'Science', 'Hindi', 'Sanskrit'], defaultRoom: 'R5', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b9', name: 'aarohan', displayName: 'Aarohan', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics'], defaultRoom: 'R5', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
+  { id: 'b10', name: 'ramanujhan', displayName: 'Ramanujhan', category: 'Junior', subjects: ['Biology', 'Chemistry', 'Maths', 'Physics'], defaultRoom: 'R6', slotSession: 'Evening', scheduleDays: allDays, priority: 10, active: true, locked: false },
   // JEE (evening batches)
-  { id: 'b11', name: 'samarpan-11a', displayName: 'Samarpan (11 ENGG-A)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R6', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b12', name: 'samarthya-11b', displayName: 'Samarthya (11B)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R7', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b13', name: 'kailasha', displayName: 'Kailasha (Class 11)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R1', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b14', name: 'r-batch-12', displayName: 'R-Batch (12 ENGG)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R1', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b15', name: 'udaan', displayName: 'Udaan', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R3', slotSession: 'Evening', active: true, locked: false },
+  { id: 'b11', name: 'samarpan-11a', displayName: 'Samarpan (11 ENGG-A)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R6', slotSession: 'Evening', scheduleDays: allDays, priority: 5, active: true, locked: false },
+  { id: 'b12', name: 'samarthya-11b', displayName: 'Samarthya (11B)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R7', slotSession: 'Evening', scheduleDays: allDays, priority: 5, active: true, locked: false },
+  { id: 'b13', name: 'kailasha', displayName: 'Kailasha (Class 11)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R1', slotSession: 'Evening', scheduleDays: allDays, priority: 5, active: true, locked: false },
+  { id: 'b14', name: 'r-batch-12', displayName: 'R-Batch (12 ENGG)', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R1', slotSession: 'Evening', scheduleDays: allDays, priority: 5, active: true, locked: false },
+  { id: 'b15', name: 'udaan', displayName: 'Udaan', category: 'JEE', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R3', slotSession: 'Evening', scheduleDays: allDays, priority: 5, active: true, locked: false },
   // NEET (evening batches)
-  { id: 'b17', name: 'samriddhi', displayName: 'Samriddhi (11 NEET)', category: 'NEET', subjects: ['Physics', 'Chemistry', 'Biology'], defaultRoom: 'R7', slotSession: 'Evening', active: true, locked: false },
-  { id: 'b18', name: 'umang', displayName: 'Umang (12 NEET)', category: 'NEET', subjects: ['Physics', 'Chemistry', 'Biology'], defaultRoom: 'R8', slotSession: 'Evening', active: true, locked: false },
+  { id: 'b17', name: 'samriddhi', displayName: 'Samriddhi (11 NEET)', category: 'NEET', subjects: ['Physics', 'Chemistry', 'Biology'], defaultRoom: 'R7', slotSession: 'Evening', scheduleDays: allDays, priority: 5, active: true, locked: false },
+  { id: 'b18', name: 'umang', displayName: 'Umang (12 NEET)', category: 'NEET', subjects: ['Physics', 'Chemistry', 'Biology'], defaultRoom: 'R8', slotSession: 'Evening', scheduleDays: allDays, priority: 5, active: true, locked: false },
   // Droppers (morning batches)
-  { id: 'b19', name: 'tejas', displayName: 'Tejas 2026 (Passout ENGG)', category: 'Droppers', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R1', slotSession: 'Morning', active: true, locked: false },
-  { id: 'b20', name: 'prayass', displayName: 'Prayass 2026 (Passout NEET)', category: 'Droppers', subjects: ['Physics', 'Chemistry', 'Biology'], defaultRoom: 'R2', slotSession: 'Morning', active: true, locked: false },
+  { id: 'b19', name: 'tejas', displayName: 'Tejas 2026 (Passout ENGG)', category: 'Droppers', subjects: ['Physics', 'Chemistry', 'Maths'], defaultRoom: 'R1', slotSession: 'Morning', scheduleDays: allDays, priority: 1, active: true, locked: false },
+  { id: 'b20', name: 'prayass', displayName: 'Prayass 2026 (Passout NEET)', category: 'Droppers', subjects: ['Physics', 'Chemistry', 'Biology'], defaultRoom: 'R2', slotSession: 'Morning', scheduleDays: allDays, priority: 1, active: true, locked: false },
 ];
 
 export const defaultRooms: Room[] = [
@@ -51,13 +53,7 @@ export const defaultRooms: Room[] = [
   { id: 'R9', name: 'Room 09', active: true },
 ];
 
-// Distribution templates by category (from reference image)
-// CBSE+(6-10): 9 classes/week → BIO 11%, ENG 11%, MAT 33%, SST 22%, Sci 22%
-// SPA jr(8): 9 classes → BIO 11%, MAT 44%, SST 11%, Sci 33%
-// SPA jr(9+10): 9 classes → BIO 22%, CHE 11%, MAT 44%, PHY 11%, Sci 11%
-// JEE: 9 classes → CHE 11%, MAT 44%, PHY 11%, BIO 22%, Sci 11% → simplified PCM: 33/33/33
-// NEET: BIO 40%, CHE 30%, PHY 30%
-
+// Distribution templates by category
 export const categoryDistributions: Record<string, { subject: Subject; percentage: number }[]> = {
   'CBSE': [
     { subject: 'Biology', percentage: 11 },
