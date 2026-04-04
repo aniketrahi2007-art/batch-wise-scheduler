@@ -21,9 +21,11 @@ export interface Batch {
   category: BatchCategory;
   subjects: Subject[];
   defaultRoom: string;
-  slotSession: 'Morning' | 'Evening'; // which 3 slots this batch uses
+  slotSession: 'Morning' | 'Evening';
+  scheduleDays: DayOfWeek[];
+  priority: number; // lower = higher priority, scheduled first
   active: boolean;
-  locked: boolean; // manual lock
+  locked: boolean;
 }
 
 export interface Room {
