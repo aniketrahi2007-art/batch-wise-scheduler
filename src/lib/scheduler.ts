@@ -100,11 +100,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
   const checkConsecutiveRule = (batchId: string, day: DayOfWeek, subject: Subject): boolean => {
     const daySubjects = batchDaySubjects.get(batchId)?.get(day) || [];
     const sameSubjectCount = daySubjects.filter(s => s === subject).length;
-    if (sameSubjectCount >= 2) {
-      const otherSubjects = new Set(daySubjects.filter(s => s !== subject));
-      if (sameSubjectCount >= 3) return false;
-      if (sameSubjectCount === 2 && otherSubjects.size > 1) return false;
-    }
+    if (sameSubjectCount >= 2) return false; // hard cap at 2 per day
     return true;
   };
 
@@ -236,7 +232,8 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
 
           const daySubjects = batchDaySubjects.get(batch.id)?.get(day) || [];
           const sameSubjectToday = daySubjects.filter(s => s === subject).length;
-          if (sameSubjectToday >= 1 && round === 0) continue;
+          if (sameSubjectToday >= 2) continue; // max 2 classes of same subject per day
+          if (sameSubjectToday >= 1 && round === 0) continue; // spread first, double up in later rounds
 
           for (const slot of batchSlots) {
             if (classesAssigned >= count) break;
