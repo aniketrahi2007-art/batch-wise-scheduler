@@ -234,10 +234,17 @@ export function TimetableView() {
                       const slots = getBatchSlots(batch.slotSession);
                       return slots.map(slot => {
                         const entry = getEntry(batch.id, day, slot.id);
+                        const isMerged = entry?.merged && entry.merged.length > 0;
                         return (
-                          <td key={`${batch.id}-${day}-${slot.id}`} className={`border border-border p-1 text-center font-bold text-xs ${dayColor} ${entry ? '' : 'text-muted-foreground/30'}`}>
-                            {entry ? getTeacherCode(entry.teacherId) : ''}
+                          <td key={`${batch.id}-${day}-${slot.id}`} className={`border border-border p-1 text-center font-bold text-xs ${dayColor} ${entry ? '' : 'text-muted-foreground/30'} ${isMerged ? 'ring-1 ring-inset ring-info/40 bg-info/5' : ''}`}>
+                            {entry ? (
+                              <div>
+                                <span>{getTeacherCode(entry.teacherId)}</span>
+                                {isMerged && <span className="text-[8px] text-info block">M</span>}
+                              </div>
+                            ) : ''}
                           </td>
+                        );
                         );
                       });
                     })}
