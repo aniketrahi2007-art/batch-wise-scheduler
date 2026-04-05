@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Save, X, Merge, AlertTriangle } from 'lucide-react';
 
 const ALL_SUBJECTS: Subject[] = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Sanskrit', 'SST', 'Science'];
 
 export function MergeManager() {
-  const { batches, teachers, mergeRules, addMergeRule, removeMergeRule, mappings } = useTimetableStore();
+  const { batches, teachers, mergeRules, addMergeRule, removeMergeRule, updateMergeRule, mappings } = useTimetableStore();
   const activeBatches = batches.filter(b => b.active);
   const activeTeachers = teachers.filter(t => t.active);
 
@@ -19,8 +20,8 @@ export function MergeManager() {
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<Subject | ''>('');
   const [selectedTeacher, setSelectedTeacher] = useState('');
+  const [classesPerWeek, setClassesPerWeek] = useState<number>(0);
 
-  // Get common subjects among selected batches
   const commonSubjects = useMemo(() => {
     if (selectedBatches.length < 2) return [];
     const first = activeBatches.find(b => b.id === selectedBatches[0]);
@@ -33,19 +34,16 @@ export function MergeManager() {
     );
   }, [selectedBatches, activeBatches]);
 
-  // Get eligible teachers for selected subject (must be mapped to ALL selected batches for that subject)
   const eligibleTeachers = useMemo(() => {
     if (!selectedSubject || selectedBatches.length < 2) return [];
     return activeTeachers.filter(t => {
       if (!t.subjects.includes(selectedSubject as Subject)) return false;
-      // Check if mapped to all selected batches
       return selectedBatches.every(bid =>
         mappings.some(m => m.teacherId === t.id && m.batchId === bid && m.subject === selectedSubject)
       );
     });
   }, [selectedSubject, selectedBatches, activeTeachers, mappings]);
 
-  // Check for same session among selected batches
   const sessionConflict = useMemo(() => {
     if (selectedBatches.length < 2) return false;
     const sessions = selectedBatches.map(bid => activeBatches.find(b => b.id === bid)?.slotSession);
@@ -67,10 +65,12 @@ export function MergeManager() {
       batchIds: selectedBatches,
       subject: selectedSubject as Subject,
       teacherId: selectedTeacher,
+      classesPerWeek: classesPerWeek > 0 ? classesPerWeek : undefined,
     });
     setSelectedBatches([]);
     setSelectedSubject('');
     setSelectedTeacher('');
+    setClassesPerWeek(0);
     setAdding(false);
   };
 
@@ -94,20 +94,17 @@ export function MergeManager() {
         </Button>
       </div>
 
-      {/* Info */}
       <Card className="p-3 bg-info/5 border-info/20">
         <p className="text-xs text-muted-foreground">
           <strong>How merge works:</strong> Merged batches share the same slot, teacher, and room for the specified subject.
-          The scheduler will schedule them together as a single class. Requirements: same session (Morning/Evening), same teacher mapped to all batches, same room.
+          You can set the number of merged classes per week. If not set, it uses the distribution percentage.
         </p>
       </Card>
 
-      {/* Add new rule */}
       {adding && (
         <Card className="p-4 space-y-4 border-primary/30">
           <h3 className="text-sm font-semibold text-foreground">New Merge Rule</h3>
 
-          {/* Step 1: Select batches */}
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-2 block">1. Select batches to merge (min 2)</label>
             <div className="grid grid-cols-3 gap-2 max-h-48 overflow-auto">
@@ -131,7 +128,6 @@ export function MergeManager() {
             )}
           </div>
 
-          {/* Step 2: Select subject */}
           {selectedBatches.length >= 2 && !sessionConflict && (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">2. Subject</label>
@@ -145,7 +141,6 @@ export function MergeManager() {
             </div>
           )}
 
-          {/* Step 3: Select teacher */}
           {selectedSubject && (
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">3. Teacher (must be mapped to all selected batches)</label>
@@ -159,6 +154,20 @@ export function MergeManager() {
             </div>
           )}
 
+          {selectedTeacher && (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">4. Merged classes per week (0 = auto from distribution)</label>
+              <Input
+                type="number"
+                min={0}
+                max={18}
+                value={classesPerWeek}
+                onChange={e => setClassesPerWeek(parseInt(e.target.value) || 0)}
+                className="w-32"
+              />
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -167,14 +176,13 @@ export function MergeManager() {
             >
               <Save className="w-3 h-3 mr-1" /> Create Rule
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setSelectedBatches([]); setSelectedSubject(''); setSelectedTeacher(''); }}>
+            <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setSelectedBatches([]); setSelectedSubject(''); setSelectedTeacher(''); setClassesPerWeek(0); }}>
               <X className="w-3 h-3 mr-1" /> Cancel
             </Button>
           </div>
         </Card>
       )}
 
-      {/* Existing rules */}
       {mergeRules.length === 0 && !adding && (
         <div className="text-center py-12 text-muted-foreground">
           <Merge className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -199,6 +207,18 @@ export function MergeManager() {
                 <Badge variant="default" className="text-xs">{rule.subject}</Badge>
                 <span className="text-muted-foreground">by</span>
                 <Badge variant="outline" className="text-xs font-mono">{getTeacherLabel(rule.teacherId)}</Badge>
+                <span className="text-muted-foreground">·</span>
+                <span className="text-xs text-muted-foreground">
+                  {rule.classesPerWeek ? `${rule.classesPerWeek} classes/week` : 'auto'}
+                </span>
+                <Input
+                  type="number"
+                  min={0}
+                  max={18}
+                  value={rule.classesPerWeek || 0}
+                  onChange={e => updateMergeRule(rule.id, { classesPerWeek: parseInt(e.target.value) || undefined })}
+                  className="w-16 h-6 text-xs inline"
+                />
               </div>
             </div>
             <Button size="icon" variant="ghost" className="text-destructive" onClick={() => removeMergeRule(rule.id)}>
