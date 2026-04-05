@@ -98,6 +98,7 @@ export interface MergeRule {
   batchIds: string[];
   subject: Subject;
   teacherId: string;
+  classesPerWeek?: number; // if set, overrides distribution-based count
 }
 
 export interface TeacherPair {

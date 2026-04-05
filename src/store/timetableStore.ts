@@ -65,6 +65,7 @@ interface TimetableStore {
   // Merge
   addMergeRule: (rule: MergeRule) => void;
   removeMergeRule: (id: string) => void;
+  updateMergeRule: (id: string, data: Partial<MergeRule>) => void;
 
   // Teacher pairs
   addTeacherPair: (pair: TeacherPair) => void;
@@ -227,6 +228,9 @@ export const useTimetableStore = create<TimetableStore>()(
 
       addMergeRule: (rule) => set(s => ({ mergeRules: [...s.mergeRules, rule] })),
       removeMergeRule: (id) => set(s => ({ mergeRules: s.mergeRules.filter(r => r.id !== id) })),
+      updateMergeRule: (id, data) => set(s => ({
+        mergeRules: s.mergeRules.map(r => r.id === id ? { ...r, ...data } : r),
+      })),
 
       addTeacherPair: (pair) => set(s => ({ teacherPairs: [...s.teacherPairs, pair] })),
       removeTeacherPair: (id) => set(s => ({ teacherPairs: s.teacherPairs.filter(p => p.id !== id) })),
