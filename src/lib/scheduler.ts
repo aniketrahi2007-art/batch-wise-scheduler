@@ -16,23 +16,12 @@ interface SchedulerInput {
   weekConfig: WeekConfig;
 }
 
-// A "demand" is a batch-subject pair that needs N classes scheduled
 interface Demand {
   batchId: string;
   subject: Subject;
   classesNeeded: number;
   classesAssigned: number;
-  teacherIds: string[]; // eligible teacher IDs
-}
-
-// A candidate placement for a single class
-interface Candidate {
-  demandIdx: number;
-  day: DayOfWeek;
-  slot: SlotId;
-  teacherId: string;
-  roomId: string;
-  score: number; // lower = more constrained = schedule first
+  teacherIds: string[];
 }
 
 export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
@@ -42,6 +31,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
   const errors: string[] = [];
 
   const holidayDays = new Set(weekConfig.holidays.map(h => h.day));
+  const activeRooms = rooms.filter(r => r.active);
 
   const getBatchActiveDays = (batch: Batch): DayOfWeek[] => {
     const batchDays = batch.scheduleDays && batch.scheduleDays.length > 0 ? batch.scheduleDays : DAYS;
@@ -132,6 +122,17 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     return teacherDayHours.get(teacherId)?.get(day) || 0;
   };
 
+  // ===== Find any available room for a given day+slot =====
+  const findAvailableRoom = (day: DayOfWeek, slot: SlotId, preferredRoom: string): string | null => {
+    // Try preferred room first
+    if (isFree(preferredRoom, roomSchedule, day, slot)) return preferredRoom;
+    // Try any other active room
+    for (const room of activeRooms) {
+      if (isFree(room.id, roomSchedule, day, slot)) return room.id;
+    }
+    return null;
+  };
+
   // ===== Calculate classes needed =====
   const classesNeeded = new Map<string, Map<Subject, number>>();
   for (const batch of activeBatches) {
@@ -146,7 +147,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     classesNeeded.set(batch.id, batchClasses);
   }
 
-  // ========== PHASE 1: Merged batches (unchanged logic) ==========
+  // ========== PHASE 1: Merged batches ==========
   const mergedBatchSubjects = new Set<string>();
 
   for (const rule of mergeRules) {
@@ -160,7 +161,7 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
 
     const session = mergeBatches[0].slotSession;
     const mergeSlots = SLOTS.filter(s => s.session === session);
-    const roomId = mergeBatches[0].defaultRoom;
+    const preferredRoom = mergeBatches[0].defaultRoom;
 
     const commonDays = DAYS.filter(d =>
       !holidayDays.has(d) &&
@@ -170,10 +171,16 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
       })
     );
 
-    let maxNeeded = 0;
-    for (const mb of mergeBatches) {
-      const count = classesNeeded.get(mb.id)?.get(rule.subject) || 0;
-      if (count > maxNeeded) maxNeeded = count;
+    // Use classesPerWeek if set, otherwise use max from distributions
+    let maxNeeded: number;
+    if (rule.classesPerWeek != null && rule.classesPerWeek > 0) {
+      maxNeeded = rule.classesPerWeek;
+    } else {
+      maxNeeded = 0;
+      for (const mb of mergeBatches) {
+        const count = classesNeeded.get(mb.id)?.get(rule.subject) || 0;
+        if (count > maxNeeded) maxNeeded = count;
+      }
     }
 
     let classesAssigned = 0;
@@ -191,9 +198,12 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
           if (!teacherSlots.includes(slot.id)) continue;
           if (!isFree(teacher.id, teacherSchedule, day, slot.id)) continue;
           if (!isPairedFree(teacher.id, day, slot.id)) continue;
-          if (!isFree(roomId, roomSchedule, day, slot.id)) continue;
           if (!mergeBatches.every(mb => isFree(mb.id, batchSchedule, day, slot.id))) continue;
           if (getTeacherHours(teacher.id, day) >= 5) continue;
+
+          // Find available room (flexible)
+          const roomId = findAvailableRoom(day, slot.id, preferredRoom);
+          if (!roomId) continue;
 
           for (const mb of mergeBatches) {
             entries.push({
@@ -213,8 +223,19 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
       }
     }
 
+    // Subtract merged classes from individual demands
     for (const mb of mergeBatches) {
       mergedBatchSubjects.add(`${mb.id}|${rule.subject}`);
+      const batchNeeded = classesNeeded.get(mb.id);
+      if (batchNeeded) {
+        const origCount = batchNeeded.get(rule.subject) || 0;
+        const remaining = Math.max(0, origCount - classesAssigned);
+        if (remaining > 0) {
+          batchNeeded.set(rule.subject, remaining);
+          // Don't add to mergedBatchSubjects so remaining gets scheduled individually
+          mergedBatchSubjects.delete(`${mb.id}|${rule.subject}`);
+        }
+      }
     }
 
     if (classesAssigned < maxNeeded) {
@@ -227,19 +248,17 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
   }
 
   // ========== PHASE 2: MCF (Most Constrained First) scheduling ==========
-  // Build all demands
   const demands: Demand[] = [];
   for (const batch of activeBatches) {
     const needed = classesNeeded.get(batch.id);
     if (!needed) continue;
     for (const [subject, count] of needed.entries()) {
       if (mergedBatchSubjects.has(`${batch.id}|${subject}`)) continue;
+      if (count <= 0) continue;
 
-      // Find eligible teachers
       const batchMappings = mappings.filter(m => m.batchId === batch.id && m.subject === subject);
       let teacherIds = batchMappings.map(m => m.teacherId).filter(id => teacherMap.has(id));
       if (teacherIds.length === 0) {
-        // Fallback: any active teacher that teaches this subject
         teacherIds = activeTeachers.filter(t => t.subjects.includes(subject)).map(t => t.id);
       }
       if (teacherIds.length === 0) {
@@ -247,13 +266,10 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
         continue;
       }
 
-      demands.push({
-        batchId: batch.id, subject, classesNeeded: count, classesAssigned: 0, teacherIds,
-      });
+      demands.push({ batchId: batch.id, subject, classesNeeded: count, classesAssigned: 0, teacherIds });
     }
   }
 
-  // Score a demand by how many valid placement options it has (fewer = more constrained)
   const scoreDemand = (d: Demand): number => {
     const batch = batchMap.get(d.batchId)!;
     const batchDays = getBatchActiveDays(batch);
@@ -266,8 +282,6 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
 
       for (const slot of batchSlots) {
         if (!isFree(d.batchId, batchSchedule, day, slot.id)) continue;
-        const roomId = batch.defaultRoom;
-        if (!isFree(roomId, roomSchedule, day, slot.id)) continue;
 
         for (const tid of d.teacherIds) {
           const avail = teacherAvailSet.get(tid);
@@ -275,33 +289,29 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
           if (!isFree(tid, teacherSchedule, day, slot.id)) continue;
           if (!isPairedFree(tid, day, slot.id)) continue;
           if (getTeacherHours(tid, day) >= 5) continue;
+          // Check if ANY room is available
+          if (!findAvailableRoom(day, slot.id, batch.defaultRoom)) continue;
           options++;
-          break; // one valid teacher is enough to count this slot
+          break;
         }
       }
     }
     return options;
   };
 
-  // Find best candidate slot for a demand
-  const findBestCandidate = (d: Demand): Candidate | null => {
+  const findBestCandidate = (d: Demand): { day: DayOfWeek; slot: SlotId; teacherId: string; roomId: string } | null => {
     const batch = batchMap.get(d.batchId)!;
     const batchDays = getBatchActiveDays(batch);
     const batchSlots = SLOTS.filter(s => s.session === batch.slotSession);
-    let best: Candidate | null = null;
-    let bestScore = Infinity;
+    let best: { day: DayOfWeek; slot: SlotId; teacherId: string; roomId: string; score: number } | null = null;
 
     for (const day of batchDays) {
       const sameSubToday = getSubjectsOnDay(d.batchId, day).filter(s => s === d.subject).length;
       if (sameSubToday >= 2) continue;
-
-      // Prefer days where this subject hasn't been placed yet (spread), but allow doubling
       const spreadPenalty = sameSubToday * 100;
 
       for (const slot of batchSlots) {
         if (!isFree(d.batchId, batchSchedule, day, slot.id)) continue;
-        const roomId = batch.defaultRoom;
-        if (!isFree(roomId, roomSchedule, day, slot.id)) continue;
 
         for (const tid of d.teacherIds) {
           const avail = teacherAvailSet.get(tid);
@@ -310,29 +320,26 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
           if (!isPairedFree(tid, day, slot.id)) continue;
           if (getTeacherHours(tid, day) >= 5) continue;
 
-          // Score this candidate:
-          // - Prefer teachers with fewer total available slots (scarce teachers first)
-          // - Prefer spreading subjects across days (but allow doubling)
-          // - Prefer filling days where batch already has fewer classes
+          const roomId = findAvailableRoom(day, slot.id, batch.defaultRoom);
+          if (!roomId) continue;
+
           const teacherTotalAvail = teacherAvailSet.get(tid)?.size || 0;
           const batchDayLoad = getSubjectsOnDay(d.batchId, day).length;
-          // Lower score = better candidate
-          const score = spreadPenalty + teacherTotalAvail + batchDayLoad * 10;
+          // Prefer the batch's default room
+          const roomPenalty = roomId === batch.defaultRoom ? 0 : 5;
+          const score = spreadPenalty + teacherTotalAvail + batchDayLoad * 10 + roomPenalty;
 
-          if (score < bestScore) {
-            bestScore = score;
-            best = { demandIdx: -1, day, slot: slot.id, teacherId: tid, roomId, score };
+          if (!best || score < best.score) {
+            best = { day, slot: slot.id, teacherId: tid, roomId, score };
           }
-          break; // first valid teacher for this slot is enough (they're ordered)
+          break;
         }
       }
     }
     return best;
   };
 
-  // Sort demands by batch priority first, then by scarcity
   const sortDemands = () => {
-    // Pre-compute scores
     const scores = demands.map((d, i) => ({
       idx: i,
       remaining: d.classesNeeded - d.classesAssigned,
@@ -341,24 +348,18 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     }));
 
     scores.sort((a, b) => {
-      // Filter out completed
       if (a.remaining <= 0 && b.remaining > 0) return 1;
       if (b.remaining <= 0 && a.remaining > 0) return -1;
       if (a.remaining <= 0 && b.remaining <= 0) return 0;
-
-      // Most constrained first (fewest options)
       if (a.flexibility !== b.flexibility) return a.flexibility - b.flexibility;
-      // Then by batch priority
       if (a.priority !== b.priority) return a.priority - b.priority;
-      // Then by most classes needed
       return b.remaining - a.remaining;
     });
 
     return scores.filter(s => s.remaining > 0);
   };
 
-  // Main scheduling loop: repeatedly pick the most constrained demand and place one class
-  let maxIterations = 5000; // safety limit
+  let maxIterations = 5000;
   let progress = true;
 
   while (progress && maxIterations > 0) {
@@ -376,8 +377,6 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
       const candidate = findBestCandidate(demand);
       if (!candidate) continue;
 
-      // Place the class
-      const batch = batchMap.get(demand.batchId)!;
       entries.push({
         day: candidate.day, slot: candidate.slot,
         batchId: demand.batchId, teacherId: candidate.teacherId,
@@ -390,11 +389,10 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
       addTeacherHour(candidate.teacherId, candidate.day);
       demand.classesAssigned++;
       progress = true;
-      break; // re-sort after each placement for optimal constraint propagation
+      break;
     }
   }
 
-  // Collect unfinished demands into backlog
   for (const d of demands) {
     const short = d.classesNeeded - d.classesAssigned;
     if (short > 0) {
