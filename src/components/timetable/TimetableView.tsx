@@ -245,8 +245,7 @@ export function TimetableView() {
                             ) : ''}
                           </td>
                         );
-                      });
-                      });
+                    });
                     })}
                   </tr>
                 </>
