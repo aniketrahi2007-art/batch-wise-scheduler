@@ -35,6 +35,7 @@ export function TimetableGenerator() {
           availability: store.availability,
           mappings: store.mappings,
           distributions: store.distributions,
+          teacherSubDistributions: store.teacherSubDistributions || [],
           mergeRules: store.mergeRules,
           teacherPairs: store.teacherPairs || [],
           weekConfig: store.weekConfig,
