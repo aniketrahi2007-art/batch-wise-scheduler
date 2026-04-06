@@ -107,6 +107,13 @@ export interface TeacherPair {
   label?: string;
 }
 
+export interface TeacherSubDistribution {
+  batchId: string;
+  subject: Subject;
+  teacherId: string;
+  percentage: number; // percentage of the subject's classes this teacher handles
+}
+
 export const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export const SLOTS: SlotTime[] = [
