@@ -3,104 +3,73 @@ import { persist } from 'zustand/middleware';
 import {
   Teacher, Batch, Room, TeacherAvailability, TeacherBatchMapping,
   SubjectDistribution, WeekConfig, GeneratedTimetable, MergeRule, TeacherPair,
-  DAYS, SLOTS, DayOfWeek, SlotId, Subject
+  TeacherSubDistribution, DAYS, SLOTS, DayOfWeek, SlotId, Subject
 } from '@/types/timetable';
 import { defaultTeachers, defaultBatches, defaultRooms, categoryDistributions } from '@/data/defaults';
 
 interface TimetableStore {
-  // Master data
   teachers: Teacher[];
   batches: Batch[];
   rooms: Room[];
-
-  // Availability (persistent defaults)
   availability: TeacherAvailability[];
-
-  // Mappings
   mappings: TeacherBatchMapping[];
-
-  // Distribution
   distributions: SubjectDistribution[];
-
-  // Merge rules
+  teacherSubDistributions: TeacherSubDistribution[];
   mergeRules: MergeRule[];
   teacherPairs: TeacherPair[];
-
-  // Week config
   weekConfig: WeekConfig;
-
-  // Generated
   generatedTimetable: GeneratedTimetable | null;
-
-  // Active tab
   activeTab: string;
+
   setActiveTab: (tab: string) => void;
 
-  // Teacher actions
   addTeacher: (t: Teacher) => void;
   updateTeacher: (id: string, t: Partial<Teacher>) => void;
   removeTeacher: (id: string) => void;
 
-  // Batch actions
   addBatch: (b: Batch) => void;
   updateBatch: (id: string, b: Partial<Batch>) => void;
   removeBatch: (id: string) => void;
 
-  // Room actions
   addRoom: (r: Room) => void;
   updateRoom: (id: string, r: Partial<Room>) => void;
   removeRoom: (id: string) => void;
 
-  // Availability
   setAvailability: (a: TeacherAvailability[]) => void;
   toggleSlotAvailability: (teacherId: string, day: DayOfWeek, slot: SlotId) => void;
 
-  // Mapping
   toggleMapping: (teacherId: string, batchId: string, subject: Subject) => void;
   setMappings: (m: TeacherBatchMapping[]) => void;
 
-  // Distribution
   setDistribution: (batchId: string, subject: Subject, percentage: number) => void;
+  setTeacherSubDistribution: (batchId: string, subject: Subject, teacherId: string, percentage: number) => void;
 
-  // Merge
   addMergeRule: (rule: MergeRule) => void;
   removeMergeRule: (id: string) => void;
   updateMergeRule: (id: string, data: Partial<MergeRule>) => void;
 
-  // Teacher pairs
   addTeacherPair: (pair: TeacherPair) => void;
   removeTeacherPair: (id: string) => void;
 
-  // Week
   setWeekConfig: (w: Partial<WeekConfig>) => void;
-
-  // Generate
   setGeneratedTimetable: (t: GeneratedTimetable | null) => void;
 }
 
-// Initialize availability: all teachers available in all slots
 function initAvailability(teachers: Teacher[]): TeacherAvailability[] {
   const result: TeacherAvailability[] = [];
   for (const t of teachers) {
     for (const day of DAYS) {
-      result.push({
-        teacherId: t.id,
-        day,
-        slots: SLOTS.map(s => s.id),
-      });
+      result.push({ teacherId: t.id, day, slots: SLOTS.map(s => s.id) });
     }
   }
   return result;
 }
 
-// Initialize distributions using category templates where available
 function initDistributions(batches: Batch[]): SubjectDistribution[] {
   const result: SubjectDistribution[] = [];
   for (const b of batches) {
-    // Try to find a category distribution template
     let template = categoryDistributions[b.category];
     if (!template) {
-      // Fallback: equal split
       const pct = Math.floor(100 / b.subjects.length);
       const remainder = 100 - pct * b.subjects.length;
       template = b.subjects.map((s, i) => ({
@@ -108,14 +77,9 @@ function initDistributions(batches: Batch[]): SubjectDistribution[] {
         percentage: pct + (i === b.subjects.length - 1 ? remainder : 0),
       }));
     }
-    // Only include subjects that the batch actually has
     for (const s of b.subjects) {
       const tmpl = template.find(t => t.subject === s);
-      result.push({
-        batchId: b.id,
-        subject: s,
-        percentage: tmpl ? tmpl.percentage : 0,
-      });
+      result.push({ batchId: b.id, subject: s, percentage: tmpl ? tmpl.percentage : 0 });
     }
   }
   return result;
@@ -130,6 +94,7 @@ export const useTimetableStore = create<TimetableStore>()(
       availability: initAvailability(defaultTeachers),
       mappings: [],
       distributions: initDistributions(defaultBatches),
+      teacherSubDistributions: [],
       mergeRules: [],
       teacherPairs: [],
       weekConfig: {
@@ -157,6 +122,7 @@ export const useTimetableStore = create<TimetableStore>()(
         teachers: s.teachers.filter(t => t.id !== id),
         availability: s.availability.filter(a => a.teacherId !== id),
         mappings: s.mappings.filter(m => m.teacherId !== id),
+        teacherSubDistributions: s.teacherSubDistributions.filter(d => d.teacherId !== id),
       })),
 
       addBatch: (b) => set(s => {
@@ -171,14 +137,17 @@ export const useTimetableStore = create<TimetableStore>()(
       updateBatch: (id, data) => set(s => {
         const updated = s.batches.map(b => b.id === id ? { ...b, ...data } : b);
         const batch = updated.find(b => b.id === id)!;
-        // Sync distributions when subjects change
         if (data.subjects) {
           const existing = s.distributions.filter(d => d.batchId === id);
           const kept = existing.filter(d => batch.subjects.includes(d.subject));
           const newSubjects = batch.subjects.filter(sub => !existing.find(d => d.subject === sub));
           const newDists = newSubjects.map(sub => ({ batchId: id, subject: sub, percentage: 0 }));
           const otherDists = s.distributions.filter(d => d.batchId !== id);
-          return { batches: updated, distributions: [...otherDists, ...kept, ...newDists] };
+          // Also clean up teacher sub-distributions for removed subjects
+          const cleanedSubDists = s.teacherSubDistributions.filter(
+            d => d.batchId !== id || batch.subjects.includes(d.subject)
+          );
+          return { batches: updated, distributions: [...otherDists, ...kept, ...newDists], teacherSubDistributions: cleanedSubDists };
         }
         return { batches: updated };
       }),
@@ -186,6 +155,7 @@ export const useTimetableStore = create<TimetableStore>()(
         batches: s.batches.filter(b => b.id !== id),
         mappings: s.mappings.filter(m => m.batchId !== id),
         distributions: s.distributions.filter(d => d.batchId !== id),
+        teacherSubDistributions: s.teacherSubDistributions.filter(d => d.batchId !== id),
       })),
 
       addRoom: (r) => set(s => ({ rooms: [...s.rooms, r] })),
@@ -199,10 +169,7 @@ export const useTimetableStore = create<TimetableStore>()(
         const avail = s.availability.map(a => {
           if (a.teacherId === teacherId && a.day === day) {
             const hasSlot = a.slots.includes(slot);
-            return {
-              ...a,
-              slots: hasSlot ? a.slots.filter(sl => sl !== slot) : [...a.slots, slot],
-            };
+            return { ...a, slots: hasSlot ? a.slots.filter(sl => sl !== slot) : [...a.slots, slot] };
           }
           return a;
         });
@@ -214,7 +181,12 @@ export const useTimetableStore = create<TimetableStore>()(
           m => m.teacherId === teacherId && m.batchId === batchId && m.subject === subject
         );
         if (exists) {
-          return { mappings: s.mappings.filter(m => m !== exists) };
+          return {
+            mappings: s.mappings.filter(m => m !== exists),
+            teacherSubDistributions: s.teacherSubDistributions.filter(
+              d => !(d.batchId === batchId && d.subject === subject && d.teacherId === teacherId)
+            ),
+          };
         }
         return { mappings: [...s.mappings, { teacherId, batchId, subject }] };
       }),
@@ -225,6 +197,23 @@ export const useTimetableStore = create<TimetableStore>()(
           d.batchId === batchId && d.subject === subject ? { ...d, percentage } : d
         ),
       })),
+
+      setTeacherSubDistribution: (batchId, subject, teacherId, percentage) => set(s => {
+        const exists = s.teacherSubDistributions.find(
+          d => d.batchId === batchId && d.subject === subject && d.teacherId === teacherId
+        );
+        if (exists) {
+          return {
+            teacherSubDistributions: s.teacherSubDistributions.map(d =>
+              d.batchId === batchId && d.subject === subject && d.teacherId === teacherId
+                ? { ...d, percentage } : d
+            ),
+          };
+        }
+        return {
+          teacherSubDistributions: [...s.teacherSubDistributions, { batchId, subject, teacherId, percentage }],
+        };
+      }),
 
       addMergeRule: (rule) => set(s => ({ mergeRules: [...s.mergeRules, rule] })),
       removeMergeRule: (id) => set(s => ({ mergeRules: s.mergeRules.filter(r => r.id !== id) })),
@@ -238,6 +227,6 @@ export const useTimetableStore = create<TimetableStore>()(
       setWeekConfig: (w) => set(s => ({ weekConfig: { ...s.weekConfig, ...w } })),
       setGeneratedTimetable: (t) => set({ generatedTimetable: t }),
     }),
-    { name: 'timetable-store', version: 2 }
+    { name: 'timetable-store', version: 3 }
   )
 );
