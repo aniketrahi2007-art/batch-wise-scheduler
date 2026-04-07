@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   Teacher, Batch, Room, TeacherAvailability, TeacherBatchMapping,
-  SubjectDistribution, WeekConfig, GeneratedTimetable, MergeRule, TeacherPair,
+  SubjectDistribution, WeekConfig, GeneratedTimetable, MergeGroup, MergeRule, TeacherPair,
   TeacherSubDistribution, DAYS, SLOTS, DayOfWeek, SlotId, Subject
 } from '@/types/timetable';
 import { defaultTeachers, defaultBatches, defaultRooms, categoryDistributions } from '@/data/defaults';
@@ -15,7 +15,8 @@ interface TimetableStore {
   mappings: TeacherBatchMapping[];
   distributions: SubjectDistribution[];
   teacherSubDistributions: TeacherSubDistribution[];
-  mergeRules: MergeRule[];
+  mergeGroups: MergeGroup[];
+  mergeRules: MergeRule[]; // deprecated, kept for migration
   teacherPairs: TeacherPair[];
   weekConfig: WeekConfig;
   generatedTimetable: GeneratedTimetable | null;
@@ -44,6 +45,11 @@ interface TimetableStore {
   setDistribution: (batchId: string, subject: Subject, percentage: number) => void;
   setTeacherSubDistribution: (batchId: string, subject: Subject, teacherId: string, percentage: number) => void;
 
+  addMergeGroup: (group: MergeGroup) => void;
+  removeMergeGroup: (id: string) => void;
+  updateMergeGroup: (id: string, data: Partial<MergeGroup>) => void;
+
+  // Keep old methods for compat
   addMergeRule: (rule: MergeRule) => void;
   removeMergeRule: (id: string) => void;
   updateMergeRule: (id: string, data: Partial<MergeRule>) => void;
@@ -85,6 +91,29 @@ function initDistributions(batches: Batch[]): SubjectDistribution[] {
   return result;
 }
 
+// Migrate old mergeRules to mergeGroups
+function migrateRulesToGroups(rules: MergeRule[]): MergeGroup[] {
+  if (!rules || rules.length === 0) return [];
+  // Group rules by batchIds (same set)
+  const groupMap = new Map<string, MergeGroup>();
+  for (const rule of rules) {
+    const key = [...rule.batchIds].sort().join('|');
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        id: `mg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        batchIds: rule.batchIds,
+        subjectConfig: [],
+      });
+    }
+    groupMap.get(key)!.subjectConfig.push({
+      subject: rule.subject,
+      teacherId: rule.teacherId,
+      classesPerWeek: rule.classesPerWeek || 0,
+    });
+  }
+  return Array.from(groupMap.values());
+}
+
 export const useTimetableStore = create<TimetableStore>()(
   persist(
     (set, get) => ({
@@ -95,6 +124,7 @@ export const useTimetableStore = create<TimetableStore>()(
       mappings: [],
       distributions: initDistributions(defaultBatches),
       teacherSubDistributions: [],
+      mergeGroups: [],
       mergeRules: [],
       teacherPairs: [],
       weekConfig: {
@@ -143,7 +173,6 @@ export const useTimetableStore = create<TimetableStore>()(
           const newSubjects = batch.subjects.filter(sub => !existing.find(d => d.subject === sub));
           const newDists = newSubjects.map(sub => ({ batchId: id, subject: sub, percentage: 0 }));
           const otherDists = s.distributions.filter(d => d.batchId !== id);
-          // Also clean up teacher sub-distributions for removed subjects
           const cleanedSubDists = s.teacherSubDistributions.filter(
             d => d.batchId !== id || batch.subjects.includes(d.subject)
           );
@@ -215,6 +244,13 @@ export const useTimetableStore = create<TimetableStore>()(
         };
       }),
 
+      addMergeGroup: (group) => set(s => ({ mergeGroups: [...s.mergeGroups, group] })),
+      removeMergeGroup: (id) => set(s => ({ mergeGroups: s.mergeGroups.filter(g => g.id !== id) })),
+      updateMergeGroup: (id, data) => set(s => ({
+        mergeGroups: s.mergeGroups.map(g => g.id === id ? { ...g, ...data } : g),
+      })),
+
+      // Deprecated - kept for compat
       addMergeRule: (rule) => set(s => ({ mergeRules: [...s.mergeRules, rule] })),
       removeMergeRule: (id) => set(s => ({ mergeRules: s.mergeRules.filter(r => r.id !== id) })),
       updateMergeRule: (id, data) => set(s => ({
@@ -227,6 +263,16 @@ export const useTimetableStore = create<TimetableStore>()(
       setWeekConfig: (w) => set(s => ({ weekConfig: { ...s.weekConfig, ...w } })),
       setGeneratedTimetable: (t) => set({ generatedTimetable: t }),
     }),
-    { name: 'timetable-store', version: 3 }
+    {
+      name: 'timetable-store',
+      version: 4,
+      migrate: (persisted: any, version: number) => {
+        if (version < 4 && persisted.mergeRules?.length > 0 && (!persisted.mergeGroups || persisted.mergeGroups.length === 0)) {
+          persisted.mergeGroups = migrateRulesToGroups(persisted.mergeRules);
+        }
+        if (!persisted.mergeGroups) persisted.mergeGroups = [];
+        return persisted;
+      },
+    }
   )
 );

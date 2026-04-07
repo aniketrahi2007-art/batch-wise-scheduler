@@ -23,7 +23,8 @@ export interface Batch {
   defaultRoom: string;
   slotSession: 'Morning' | 'Evening';
   scheduleDays: DayOfWeek[];
-  priority: number; // lower = higher priority, scheduled first
+  classDaysPerWeek?: number; // if set, scheduler picks best N days dynamically
+  priority: number;
   active: boolean;
   locked: boolean;
 }
@@ -67,7 +68,7 @@ export interface TimetableEntry {
   teacherId: string;
   subject: Subject;
   room: string;
-  merged?: string[]; // batch IDs merged with
+  merged?: string[];
 }
 
 export interface WeekConfig {
@@ -93,12 +94,26 @@ export interface BacklogItem {
   reason: string;
 }
 
+// New merge group: select batches, then configure per-subject
+export interface MergeSubjectConfig {
+  subject: Subject;
+  teacherId: string;
+  classesPerWeek: number;
+}
+
+export interface MergeGroup {
+  id: string;
+  batchIds: string[];
+  subjectConfig: MergeSubjectConfig[];
+}
+
+// Keep MergeRule for backward compat (migration)
 export interface MergeRule {
   id: string;
   batchIds: string[];
   subject: Subject;
   teacherId: string;
-  classesPerWeek?: number; // if set, overrides distribution-based count
+  classesPerWeek?: number;
 }
 
 export interface TeacherPair {
@@ -111,7 +126,7 @@ export interface TeacherSubDistribution {
   batchId: string;
   subject: Subject;
   teacherId: string;
-  percentage: number; // percentage of the subject's classes this teacher handles
+  percentage: number;
 }
 
 export const DAYS: DayOfWeek[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

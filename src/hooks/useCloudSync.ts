@@ -4,7 +4,7 @@ import { loadSharedConfig, saveSharedConfig } from '@/lib/syncConfig';
 
 const SYNC_KEYS = [
   'teachers', 'batches', 'rooms', 'availability', 'mappings',
-  'distributions', 'teacherSubDistributions', 'mergeRules', 'teacherPairs',
+  'distributions', 'teacherSubDistributions', 'mergeGroups', 'mergeRules', 'teacherPairs',
 ] as const;
 
 export function useCloudSync() {
@@ -49,6 +49,6 @@ export function useCloudSync() {
   }, [
     store.teachers, store.batches, store.rooms, store.availability,
     store.mappings, store.distributions, store.teacherSubDistributions,
-    store.mergeRules, store.teacherPairs,
+    store.mergeGroups, store.mergeRules, store.teacherPairs,
   ]);
 }
