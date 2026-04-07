@@ -68,6 +68,7 @@ export function BatchManager() {
       slotSession: form.slotSession,
       scheduleDays: form.scheduleDays,
       priority: form.priority,
+      classDaysPerWeek: form.classDaysPerWeek || undefined,
       active: true,
       locked: false,
     });
