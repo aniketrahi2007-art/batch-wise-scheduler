@@ -143,6 +143,11 @@ export function BatchManager() {
           <Input type="number" min={1} max={99} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) || 10 }))} className="h-8 text-xs" />
           <span className="text-[10px] text-muted-foreground">Lower = first</span>
         </div>
+        <div className="w-28">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Class Days/Wk</label>
+          <Input type="number" min={0} max={6} value={form.classDaysPerWeek} onChange={e => setForm(f => ({ ...f, classDaysPerWeek: parseInt(e.target.value) || 0 }))} className="h-8 text-xs" />
+          <span className="text-[10px] text-muted-foreground">0 = use schedule</span>
+        </div>
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={() => isEdit && batchId ? handleSave(batchId) : handleAdd()}><Save className="w-3 h-3 mr-1" /> Save</Button>
