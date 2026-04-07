@@ -36,7 +36,7 @@ export function TimetableGenerator() {
           mappings: store.mappings,
           distributions: store.distributions,
           teacherSubDistributions: store.teacherSubDistributions || [],
-          mergeRules: store.mergeRules,
+          mergeGroups: store.mergeGroups || [],
           teacherPairs: store.teacherPairs || [],
           weekConfig: store.weekConfig,
         });

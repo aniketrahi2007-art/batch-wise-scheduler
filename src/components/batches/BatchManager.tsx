@@ -20,10 +20,10 @@ export function BatchManager() {
   const [form, setForm] = useState({
     displayName: '', category: 'Junior' as BatchCategory,
     subjects: [] as Subject[], defaultRoom: 'R1', slotSession: 'Evening' as 'Morning' | 'Evening',
-    scheduleDays: [...DAYS] as DayOfWeek[], priority: 10,
+    scheduleDays: [...DAYS] as DayOfWeek[], priority: 10, classDaysPerWeek: 0,
   });
 
-  const resetForm = () => setForm({ displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1', slotSession: 'Evening', scheduleDays: [...DAYS], priority: 10 });
+  const resetForm = () => setForm({ displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1', slotSession: 'Evening', scheduleDays: [...DAYS], priority: 10, classDaysPerWeek: 0 });
 
   const startEdit = (b: Batch) => {
     setEditing(b.id);
@@ -36,6 +36,7 @@ export function BatchManager() {
       slotSession: b.slotSession,
       scheduleDays: b.scheduleDays ? [...b.scheduleDays] : [...DAYS],
       priority: b.priority ?? 10,
+      classDaysPerWeek: b.classDaysPerWeek || 0,
     });
   };
 
@@ -49,6 +50,7 @@ export function BatchManager() {
       slotSession: form.slotSession,
       scheduleDays: form.scheduleDays,
       priority: form.priority,
+      classDaysPerWeek: form.classDaysPerWeek || undefined,
     });
     setEditing(null);
     resetForm();
@@ -66,6 +68,7 @@ export function BatchManager() {
       slotSession: form.slotSession,
       scheduleDays: form.scheduleDays,
       priority: form.priority,
+      classDaysPerWeek: form.classDaysPerWeek || undefined,
       active: true,
       locked: false,
     });
@@ -140,6 +143,11 @@ export function BatchManager() {
           <Input type="number" min={1} max={99} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: parseInt(e.target.value) || 10 }))} className="h-8 text-xs" />
           <span className="text-[10px] text-muted-foreground">Lower = first</span>
         </div>
+        <div className="w-28">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Class Days/Wk</label>
+          <Input type="number" min={0} max={6} value={form.classDaysPerWeek} onChange={e => setForm(f => ({ ...f, classDaysPerWeek: parseInt(e.target.value) || 0 }))} className="h-8 text-xs" />
+          <span className="text-[10px] text-muted-foreground">0 = use schedule</span>
+        </div>
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={() => isEdit && batchId ? handleSave(batchId) : handleAdd()}><Save className="w-3 h-3 mr-1" /> Save</Button>
@@ -185,6 +193,7 @@ export function BatchManager() {
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {b.subjects.map(s => <Badge key={s} variant="outline" className="text-xs">{s}</Badge>)}
                         <span className="text-[10px] text-muted-foreground ml-2">Days: {(b.scheduleDays || DAYS).join(', ')}</span>
+                        {b.classDaysPerWeek && <Badge variant="outline" className="text-[10px] ml-1">{b.classDaysPerWeek} days/wk (flex)</Badge>}
                       </div>
                     </div>
                     <Switch checked={b.active} onCheckedChange={(v) => updateBatch(b.id, { active: v })} />

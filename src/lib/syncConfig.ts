@@ -8,6 +8,7 @@ interface SharedConfig {
   mappings: any[];
   distributions: any[];
   teacherSubDistributions: any[];
+  mergeGroups: any[];
   mergeRules: any[];
   teacherPairs: any[];
 }
@@ -15,7 +16,7 @@ interface SharedConfig {
 const CONFIG_ID = 'default';
 const SYNC_KEYS: (keyof SharedConfig)[] = [
   'teachers', 'batches', 'rooms', 'availability', 'mappings',
-  'distributions', 'teacherSubDistributions', 'mergeRules', 'teacherPairs',
+  'distributions', 'teacherSubDistributions', 'mergeGroups', 'mergeRules', 'teacherPairs',
 ];
 
 export async function loadSharedConfig(): Promise<Partial<SharedConfig> | null> {
