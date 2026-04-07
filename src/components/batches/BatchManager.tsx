@@ -20,10 +20,10 @@ export function BatchManager() {
   const [form, setForm] = useState({
     displayName: '', category: 'Junior' as BatchCategory,
     subjects: [] as Subject[], defaultRoom: 'R1', slotSession: 'Evening' as 'Morning' | 'Evening',
-    scheduleDays: [...DAYS] as DayOfWeek[], priority: 10,
+    scheduleDays: [...DAYS] as DayOfWeek[], priority: 10, classDaysPerWeek: 0,
   });
 
-  const resetForm = () => setForm({ displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1', slotSession: 'Evening', scheduleDays: [...DAYS], priority: 10 });
+  const resetForm = () => setForm({ displayName: '', category: 'Junior', subjects: [], defaultRoom: 'R1', slotSession: 'Evening', scheduleDays: [...DAYS], priority: 10, classDaysPerWeek: 0 });
 
   const startEdit = (b: Batch) => {
     setEditing(b.id);
