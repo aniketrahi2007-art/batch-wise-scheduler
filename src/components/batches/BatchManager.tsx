@@ -36,6 +36,7 @@ export function BatchManager() {
       slotSession: b.slotSession,
       scheduleDays: b.scheduleDays ? [...b.scheduleDays] : [...DAYS],
       priority: b.priority ?? 10,
+      classDaysPerWeek: b.classDaysPerWeek || 0,
     });
   };
 
