@@ -193,6 +193,7 @@ export function BatchManager() {
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {b.subjects.map(s => <Badge key={s} variant="outline" className="text-xs">{s}</Badge>)}
                         <span className="text-[10px] text-muted-foreground ml-2">Days: {(b.scheduleDays || DAYS).join(', ')}</span>
+                        {b.classDaysPerWeek && <Badge variant="outline" className="text-[10px] ml-1">{b.classDaysPerWeek} days/wk (flex)</Badge>}
                       </div>
                     </div>
                     <Switch checked={b.active} onCheckedChange={(v) => updateBatch(b.id, { active: v })} />
