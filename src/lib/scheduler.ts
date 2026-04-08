@@ -559,31 +559,57 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     }
   }
 
-  // ========== POST-GENERATION: Room conflict validation ==========
-  const roomSlotMap = new Map<string, string[]>();
+  // ========== POST-GENERATION: Room conflict detection & fix ==========
+  // Build a map of day+slot+room -> list of entries
+  const roomSlotEntries = new Map<string, TimetableEntry[]>();
   for (const entry of entries) {
     const key = `${entry.day}-${entry.slot}-${entry.room}`;
-    if (!roomSlotMap.has(key)) roomSlotMap.set(key, []);
-    // Only count non-merged entries as conflicts (merged entries share room)
-    const batchEntry = `${entry.batchId}`;
-    const existing = roomSlotMap.get(key)!;
-    // Check if this is a merged group
-    const isMerged = entry.merged && entry.merged.length > 0;
-    if (!isMerged) {
-      if (existing.length > 0) {
-        // Check if existing entries are from same merge group
-        const conflict = existing.some(existBid => {
-          const existEntry = entries.find(e => e.batchId === existBid && e.day === entry.day && e.slot === entry.slot && e.room === entry.room);
-          if (!existEntry) return true;
-          // If existing entry is merged with current, no conflict
-          return !existEntry.merged?.includes(entry.batchId) && !entry.merged?.includes(existBid);
-        });
-        if (conflict) {
-          errors.push(`Room conflict: ${entry.room} on ${entry.day} ${entry.slot} - multiple batches assigned`);
+    if (!roomSlotEntries.has(key)) roomSlotEntries.set(key, []);
+    roomSlotEntries.get(key)!.push(entry);
+  }
+
+  for (const [key, slotEntries] of roomSlotEntries.entries()) {
+    if (slotEntries.length <= 1) continue;
+
+    // Group by merge relationship: entries in the same merge group are OK
+    const mergeGroups2 = new Map<string, TimetableEntry[]>();
+    for (const e of slotEntries) {
+      const mergeKey = e.merged && e.merged.length > 0
+        ? [e.batchId, ...e.merged].sort().join(',')
+        : e.batchId;
+      if (!mergeGroups2.has(mergeKey)) mergeGroups2.set(mergeKey, []);
+      mergeGroups2.get(mergeKey)!.push(e);
+    }
+
+    if (mergeGroups2.size <= 1) continue; // all same merge group, no conflict
+
+    // Real conflict: try to reassign rooms for all but the first group
+    const groups = Array.from(mergeGroups2.values());
+    for (let i = 1; i < groups.length; i++) {
+      const conflictEntries = groups[i];
+      const [day, slot] = [conflictEntries[0].day, conflictEntries[0].slot];
+      // Find an alternative room
+      let altRoom: string | null = null;
+      for (const room of activeRooms) {
+        const rKey = `${day}-${slot}-${room.id}`;
+        const roomEntries = roomSlotEntries.get(rKey);
+        if (!roomEntries || roomEntries.length === 0) {
+          altRoom = room.id;
+          break;
         }
       }
+      if (altRoom) {
+        for (const ce of conflictEntries) {
+          ce.room = altRoom;
+        }
+        // Update the map
+        const newKey = `${day}-${slot}-${altRoom}`;
+        if (!roomSlotEntries.has(newKey)) roomSlotEntries.set(newKey, []);
+        roomSlotEntries.get(newKey)!.push(...conflictEntries);
+      } else {
+        errors.push(`Room conflict: ${key} - no alternative room available`);
+      }
     }
-    existing.push(batchEntry);
   }
 
   return { weekConfig, entries, backlog, feasible: backlog.length === 0 && errors.length === 0, errors };
