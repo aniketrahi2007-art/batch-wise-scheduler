@@ -143,6 +143,16 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     return slots;
   };
 
+  const getTeacherSlotsOnDay = (teacherId: string, day: DayOfWeek): SlotId[] => {
+    const set = teacherSchedule.get(teacherId);
+    if (!set) return [];
+    const slots: SlotId[] = [];
+    for (const s of SLOTS) {
+      if (set.has(sk(day, s.id))) slots.push(s.id);
+    }
+    return slots;
+  };
+
   const slotOrder: Record<SlotId, number> = { M1: 0, M2: 1, M3: 2, E1: 3, E2: 4, E3: 5 };
 
   // ========== Calculate classes needed ==========
