@@ -143,6 +143,16 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     return slots;
   };
 
+  const getTeacherSlotsOnDay = (teacherId: string, day: DayOfWeek): SlotId[] => {
+    const set = teacherSchedule.get(teacherId);
+    if (!set) return [];
+    const slots: SlotId[] = [];
+    for (const s of SLOTS) {
+      if (set.has(sk(day, s.id))) slots.push(s.id);
+    }
+    return slots;
+  };
+
   const slotOrder: Record<SlotId, number> = { M1: 0, M2: 1, M3: 2, E1: 3, E2: 4, E3: 5 };
 
   // ========== Calculate classes needed ==========
@@ -451,19 +461,28 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
         const roomId = findAvailableRoom(day, slot.id, batch.defaultRoom);
         if (!roomId) continue;
 
-        // Consecutive slot bonus
+        // Consecutive slot bonus (batch-level: prefer filling adjacent slots in batch)
         const usedSlots = getBatchSlotsOnDay(d.batchId, day);
         let consecutiveBonus = 0;
+        const thisOrder = slotOrder[slot.id];
         if (usedSlots.length > 0) {
-          const thisOrder = slotOrder[slot.id];
           const isAdjacent = usedSlots.some(us => Math.abs(slotOrder[us] - thisOrder) === 1);
           consecutiveBonus = isAdjacent ? -50 : 30;
+        }
+
+        // Teacher consecutive bonus: if teacher already has a class on this day,
+        // strongly prefer the adjacent slot so their classes are back-to-back
+        const teacherSlotsToday = getTeacherSlotsOnDay(d.teacherId, day);
+        let teacherConsecBonus = 0;
+        if (teacherSlotsToday.length > 0) {
+          const isTeacherAdjacent = teacherSlotsToday.some(ts => Math.abs(slotOrder[ts] - thisOrder) === 1);
+          teacherConsecBonus = isTeacherAdjacent ? -80 : 60; // strong preference for adjacent
         }
 
         const uniformityScore = dayLoad * 20;
         const roomPenalty = roomId === batch.defaultRoom ? 0 : 5;
         const teacherTotalAvail = teacherAvailSet.get(d.teacherId)?.size || 0;
-        const score = spreadPenalty + uniformityScore + consecutiveBonus + newDayPenalty + teacherTotalAvail + roomPenalty;
+        const score = spreadPenalty + uniformityScore + consecutiveBonus + teacherConsecBonus + newDayPenalty + teacherTotalAvail + roomPenalty;
 
         if (!best || score < best.score) {
           best = { day, slot: slot.id, roomId, score };
@@ -540,31 +559,57 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
     }
   }
 
-  // ========== POST-GENERATION: Room conflict validation ==========
-  const roomSlotMap = new Map<string, string[]>();
+  // ========== POST-GENERATION: Room conflict detection & fix ==========
+  // Build a map of day+slot+room -> list of entries
+  const roomSlotEntries = new Map<string, TimetableEntry[]>();
   for (const entry of entries) {
     const key = `${entry.day}-${entry.slot}-${entry.room}`;
-    if (!roomSlotMap.has(key)) roomSlotMap.set(key, []);
-    // Only count non-merged entries as conflicts (merged entries share room)
-    const batchEntry = `${entry.batchId}`;
-    const existing = roomSlotMap.get(key)!;
-    // Check if this is a merged group
-    const isMerged = entry.merged && entry.merged.length > 0;
-    if (!isMerged) {
-      if (existing.length > 0) {
-        // Check if existing entries are from same merge group
-        const conflict = existing.some(existBid => {
-          const existEntry = entries.find(e => e.batchId === existBid && e.day === entry.day && e.slot === entry.slot && e.room === entry.room);
-          if (!existEntry) return true;
-          // If existing entry is merged with current, no conflict
-          return !existEntry.merged?.includes(entry.batchId) && !entry.merged?.includes(existBid);
-        });
-        if (conflict) {
-          errors.push(`Room conflict: ${entry.room} on ${entry.day} ${entry.slot} - multiple batches assigned`);
+    if (!roomSlotEntries.has(key)) roomSlotEntries.set(key, []);
+    roomSlotEntries.get(key)!.push(entry);
+  }
+
+  for (const [key, slotEntries] of roomSlotEntries.entries()) {
+    if (slotEntries.length <= 1) continue;
+
+    // Group by merge relationship: entries in the same merge group are OK
+    const mergeGroups2 = new Map<string, TimetableEntry[]>();
+    for (const e of slotEntries) {
+      const mergeKey = e.merged && e.merged.length > 0
+        ? [e.batchId, ...e.merged].sort().join(',')
+        : e.batchId;
+      if (!mergeGroups2.has(mergeKey)) mergeGroups2.set(mergeKey, []);
+      mergeGroups2.get(mergeKey)!.push(e);
+    }
+
+    if (mergeGroups2.size <= 1) continue; // all same merge group, no conflict
+
+    // Real conflict: try to reassign rooms for all but the first group
+    const groups = Array.from(mergeGroups2.values());
+    for (let i = 1; i < groups.length; i++) {
+      const conflictEntries = groups[i];
+      const [day, slot] = [conflictEntries[0].day, conflictEntries[0].slot];
+      // Find an alternative room
+      let altRoom: string | null = null;
+      for (const room of activeRooms) {
+        const rKey = `${day}-${slot}-${room.id}`;
+        const roomEntries = roomSlotEntries.get(rKey);
+        if (!roomEntries || roomEntries.length === 0) {
+          altRoom = room.id;
+          break;
         }
       }
+      if (altRoom) {
+        for (const ce of conflictEntries) {
+          ce.room = altRoom;
+        }
+        // Update the map
+        const newKey = `${day}-${slot}-${altRoom}`;
+        if (!roomSlotEntries.has(newKey)) roomSlotEntries.set(newKey, []);
+        roomSlotEntries.get(newKey)!.push(...conflictEntries);
+      } else {
+        errors.push(`Room conflict: ${key} - no alternative room available`);
+      }
     }
-    existing.push(batchEntry);
   }
 
   return { weekConfig, entries, backlog, feasible: backlog.length === 0 && errors.length === 0, errors };
