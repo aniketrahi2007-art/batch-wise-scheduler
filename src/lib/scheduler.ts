@@ -451,19 +451,28 @@ export function generateTimetable(input: SchedulerInput): GeneratedTimetable {
         const roomId = findAvailableRoom(day, slot.id, batch.defaultRoom);
         if (!roomId) continue;
 
-        // Consecutive slot bonus
+        // Consecutive slot bonus (batch-level: prefer filling adjacent slots in batch)
         const usedSlots = getBatchSlotsOnDay(d.batchId, day);
         let consecutiveBonus = 0;
+        const thisOrder = slotOrder[slot.id];
         if (usedSlots.length > 0) {
-          const thisOrder = slotOrder[slot.id];
           const isAdjacent = usedSlots.some(us => Math.abs(slotOrder[us] - thisOrder) === 1);
           consecutiveBonus = isAdjacent ? -50 : 30;
+        }
+
+        // Teacher consecutive bonus: if teacher already has a class on this day,
+        // strongly prefer the adjacent slot so their classes are back-to-back
+        const teacherSlotsToday = getTeacherSlotsOnDay(d.teacherId, day);
+        let teacherConsecBonus = 0;
+        if (teacherSlotsToday.length > 0) {
+          const isTeacherAdjacent = teacherSlotsToday.some(ts => Math.abs(slotOrder[ts] - thisOrder) === 1);
+          teacherConsecBonus = isTeacherAdjacent ? -80 : 60; // strong preference for adjacent
         }
 
         const uniformityScore = dayLoad * 20;
         const roomPenalty = roomId === batch.defaultRoom ? 0 : 5;
         const teacherTotalAvail = teacherAvailSet.get(d.teacherId)?.size || 0;
-        const score = spreadPenalty + uniformityScore + consecutiveBonus + newDayPenalty + teacherTotalAvail + roomPenalty;
+        const score = spreadPenalty + uniformityScore + consecutiveBonus + teacherConsecBonus + newDayPenalty + teacherTotalAvail + roomPenalty;
 
         if (!best || score < best.score) {
           best = { day, slot: slot.id, roomId, score };
