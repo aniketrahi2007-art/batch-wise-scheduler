@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, CheckCircle2, Download } from 'lucide-react';
-import { useMemo, useCallback } from 'react';
+import { Fragment, useMemo, useCallback } from 'react';
 
 const BATCH_HEADER_COLORS: Record<string, string> = {
   JEE: 'bg-blue-500 text-primary-foreground',
@@ -28,6 +28,12 @@ const DAY_ROW_COLORS: Record<string, string> = {
 const DAY_ROW_PDF_COLORS: Record<string, string> = {
   Mon: '#eff6ff', Tue: '#eff6ff', Wed: '#eff6ff',
   Thu: '#eff6ff', Fri: '#fff7ed', Sat: '#fff7ed',
+};
+
+const formatRoomLabel = (roomId: string) => {
+  const match = roomId.match(/^R(\d+)$/);
+  if (!match) return roomId;
+  return `ROOM - ${match[1].padStart(2, '0')}`;
 };
 
 export function TimetableView() {
@@ -60,16 +66,6 @@ export function TimetableView() {
     if (!generatedTimetable) return;
     const { entries, weekConfig } = generatedTimetable;
     const activeDays = DAYS.filter(d => !weekConfig.holidays.some(h => h.day === d));
-
-    // Build SVG-based PDF content as printable HTML
-    const colWidth = 140;
-    const headerHeight = 60;
-    const slotHeaderHeight = 30;
-    const dayRowHeight = 50;
-    const leftColWidth = 100;
-    const dateColWidth = 70;
-    const totalCols = activeBatches.reduce((sum, b) => sum + getBatchSlots(b.slotSession).length, 0);
-    const tableWidth = leftColWidth + dateColWidth + totalCols * colWidth;
 
     let html = `<!DOCTYPE html><html><head><meta charset="utf-8">
     <title>Timetable - ${weekConfig.weekLabel}</title>
@@ -112,18 +108,18 @@ export function TimetableView() {
       const dayColor = DAY_ROW_PDF_COLORS[day] || '#fff';
       const dayName = day === 'Mon' ? 'MONDAY' : day === 'Tue' ? 'TUESDAY' : day === 'Wed' ? 'WEDNESDAY' : day === 'Thu' ? 'THURSDAY' : day === 'Fri' ? 'FRIDAY' : 'SATURDAY';
 
-      // Room row
       html += `<tr><td rowspan="2" style="background:${dayColor};font-weight:bold;">${dayName}</td>`;
       html += `<td style="background:${dayColor};font-size:8px;">${dateLabel}</td>`;
       for (const batch of activeBatches) {
         const slots = getBatchSlots(batch.slotSession);
-        const batchEntries = entries.filter(e => e.batchId === batch.id && e.day === day);
-        const room = batchEntries.length > 0 ? batchEntries[0].room : batch.defaultRoom;
-        html += `<td colspan="${slots.length}" style="background:${dayColor};font-size:8px;color:#666;">${room.replace('R', 'ROOM-0')}</td>`;
+        for (const slot of slots) {
+          const entry = entries.find(e => e.batchId === batch.id && e.day === day && e.slot === slot.id);
+          const room = entry?.room ?? batch.defaultRoom;
+          html += `<td style="background:${dayColor};font-size:8px;color:#666;">${formatRoomLabel(room)}</td>`;
+        }
       }
       html += `</tr>`;
 
-      // Teacher row
       html += `<tr><td style="background:${dayColor};"></td>`;
       for (const batch of activeBatches) {
         const slots = getBatchSlots(batch.slotSession);
@@ -211,24 +207,26 @@ export function TimetableView() {
               const dateLabel = getDateLabel(day);
               const dayColor = DAY_ROW_COLORS[day] || '';
               return (
-                <>
-                  <tr key={`${day}-header`}>
+                <Fragment key={day}>
+                  <tr>
                     <td className={`border border-border p-2 font-bold text-xs uppercase sticky left-0 z-10 ${dayColor}`} rowSpan={2}>
                       {day === 'Mon' ? 'MONDAY' : day === 'Tue' ? 'TUESDAY' : day === 'Wed' ? 'WEDNESDAY' : day === 'Thu' ? 'THURSDAY' : day === 'Fri' ? 'FRIDAY' : 'SATURDAY'}
                     </td>
                     <td className={`border border-border p-1 text-[10px] font-medium sticky left-[80px] z-10 ${dayColor}`}>{dateLabel}</td>
                     {activeBatches.map(batch => {
                       const slots = getBatchSlots(batch.slotSession);
-                      const batchEntries = entries.filter(e => e.batchId === batch.id && e.day === day);
-                      const room = batchEntries.length > 0 ? batchEntries[0].room : batch.defaultRoom;
-                      return (
-                        <td key={`${batch.id}-${day}-room`} colSpan={slots.length} className={`border border-border p-1 text-center text-[10px] font-medium text-muted-foreground ${dayColor}`}>
-                          {room.replace('R', 'ROOM - 0')}
-                        </td>
-                      );
+                      return slots.map(slot => {
+                        const entry = getEntry(batch.id, day, slot.id);
+                        const room = entry?.room ?? batch.defaultRoom;
+                        return (
+                          <td key={`${batch.id}-${day}-${slot.id}-room`} className={`border border-border p-1 text-center text-[10px] font-medium text-muted-foreground ${dayColor}`}>
+                            {formatRoomLabel(room)}
+                          </td>
+                        );
+                      });
                     })}
                   </tr>
-                  <tr key={`${day}-teachers`}>
+                  <tr>
                     <td className={`border border-border p-1 text-[10px] sticky left-[80px] z-10 ${dayColor}`}></td>
                     {activeBatches.map(batch => {
                       const slots = getBatchSlots(batch.slotSession);
@@ -245,10 +243,10 @@ export function TimetableView() {
                             ) : ''}
                           </td>
                         );
-                    });
+                      });
                     })}
                   </tr>
-                </>
+                </Fragment>
               );
             })}
           </tbody>
